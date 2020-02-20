@@ -109,7 +109,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     spline->SetIsSymmetric(
       parameters.waveShaper.symmetry.get(c)->getValue() ? 1.0 : 0.0, c);
     spline->SetDc(parameters.waveShaper.dc.get(c)->get(), c);
-    spline->SetWet(parameters.waveShaper.dryWet.get(c)->get(), c);
+    spline->SetWet(0.01f * parameters.waveShaper.dryWet.get(c)->get(), c);
     spline->SetHighPassFrequency(parameters.waveShaper.dcCutoff.get(c)->get(),
                                  c);
   }

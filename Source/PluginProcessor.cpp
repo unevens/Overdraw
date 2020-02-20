@@ -95,7 +95,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
   waveShaper.dc = CreateLinkableFloatParameters("DC", 0.f, -1.f, 1.f, 0.001f);
 
   waveShaper.dryWet =
-    CreateLinkableFloatParameters("Dry-Wet", 0.f, -1.f, 1.f, 0.001f);
+    CreateLinkableFloatParameters("Dry-Wet", 100.f, 0.f, 100.f, 1.0f);
 
   waveShaper.dcCutoff =
     CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
