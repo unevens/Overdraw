@@ -1,0 +1,364 @@
+/*
+Copyright 2020 Dario Mambro
+
+This file is part of Overdraw.
+
+Overdraw is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Overdraw is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+
+OverdrawAudioProcessor::Parameters::Parameters(
+  OverdrawAudioProcessor& processor)
+{
+  std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
+
+  auto const CreateFloatParameter =
+    [&](String name, float value, float min, float max, float step = 0.01f) {
+      parameters.push_back(std::unique_ptr<RangedAudioParameter>(
+        new AudioParameterFloat(name, name, { min, max, step }, value)));
+
+      return static_cast<AudioParameterFloat*>(parameters.back().get());
+    };
+
+  auto const createWrappedBoolParameter = [&](String name, float value) {
+    WrappedBoolParameter wrapper;
+    parameters.push_back(wrapper.createParameter(name, value));
+    return wrapper;
+  };
+
+  auto const CreateBoolParameter = [&](String name, float value) {
+    parameters.push_back(std::unique_ptr<RangedAudioParameter>(
+      new AudioParameterBool(name, name, value)));
+
+    return static_cast<AudioParameterBool*>(parameters.back().get());
+  };
+
+  auto const CreateChoiceParameter =
+    [&](String name, StringArray choices, int defaultIndex = 0) {
+      parameters.push_back(std::unique_ptr<RangedAudioParameter>(
+        new AudioParameterChoice(name, name, choices, defaultIndex)));
+
+      return static_cast<AudioParameterChoice*>(parameters.back().get());
+    };
+
+  String const ch0Suffix = "_ch0";
+  String const ch1Suffix = "_ch1";
+  String const linkSuffix = "_is_linked";
+
+  auto const CreateLinkableFloatParameters =
+    [&](String name, float value, float min, float max, float step = 0.01f) {
+      return LinkableParameter<AudioParameterFloat>{
+        createWrappedBoolParameter(name + linkSuffix, true),
+        { CreateFloatParameter(name + ch0Suffix, value, min, max, step),
+          CreateFloatParameter(name + ch1Suffix, value, min, max, step) }
+      };
+    };
+
+  auto const CreateLinkableBoolParameters = [&](String name, bool value) {
+    return LinkableParameter<WrappedBoolParameter>{
+      createWrappedBoolParameter(name + linkSuffix, true),
+      { createWrappedBoolParameter(name + ch0Suffix, value),
+        createWrappedBoolParameter(name + ch1Suffix, value) }
+    };
+  };
+
+  auto const CreateLinkableChoiceParameters =
+    [&](String name, StringArray choices, int defaultIndex = 0) {
+      return LinkableParameter<AudioParameterChoice>{
+        createWrappedBoolParameter(name + linkSuffix, true),
+        { CreateChoiceParameter(name + ch0Suffix, choices, defaultIndex),
+          CreateChoiceParameter(name + ch1Suffix, choices, defaultIndex) }
+      };
+    };
+
+  midSide = CreateBoolParameter("Mid-Side", false);
+
+  inputGain = CreateLinkableFloatParameters("Input-Gain", 0.f, -48.f, +48.f);
+
+  outputGain = CreateLinkableFloatParameters("Output-Gain", 0.f, -48.f, +48.f);
+
+  waveShaper.symmetry = CreateLinkableBoolParameters("Symmetry", true);
+
+  waveShaper.dc = CreateLinkableFloatParameters("DC", 0.f, -1.f, 1.f, 0.001f);
+
+  waveShaper.dryWet =
+    CreateLinkableFloatParameters("Dry-Wet", 0.f, -1.f, 1.f, 0.001f);
+
+  waveShaper.dcCutoff =
+    CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
+
+  spline = std::unique_ptr<SplineParameters>(
+    new SplineParameters("Spline",
+                         parameters,
+                         OverdrawAudioProcessor::maxNumNodes,
+                         { -2.f, 2.f, 0.0001f },
+                         { -2.f, 2.f, 0.0001f },
+                         { -20.f, 20.f, 0.01f }));
+
+  apvts = std::unique_ptr<AudioProcessorValueTreeState>(
+    new AudioProcessorValueTreeState(processor,
+                                     nullptr,
+                                     "OVERDRAW-PARAMETERS",
+                                     { parameters.begin(), parameters.end() }));
+}
+
+OverdrawAudioProcessor::OverdrawAudioProcessor()
+#ifndef JucePlugin_PreferredChannelConfigurations
+  : AudioProcessor(BusesProperties()
+#if !JucePlugin_IsMidiEffect
+#if !JucePlugin_IsSynth
+                     .withInput("Input", AudioChannelSet::stereo(), true)
+#endif
+                     .withOutput("Output", AudioChannelSet::stereo(), true)
+#endif
+                     )
+#endif
+  , parameters(*this)
+
+  , splines(avec::SplineHolder<avec::WaveShaper, Vec2d>::New<maxNumNodes>())
+
+  , asyncOversampling([this] {
+    auto oversampling = OversamplingSettings{};
+    oversampling.numScalarToVecUpsamplers = 2;
+    oversampling.numVecToScalarDownsamplers = 1;
+    oversampling.numChannels = 2;
+    oversampling.UpdateLatency = [this](int latency) {
+      setLatencySamples(latency);
+    };
+    return oversampling;
+  }())
+
+  , oversamplingGetter(
+      *oversimple::RequestOversamplingGetter<double>(asyncOversampling))
+
+  , oversamplingSerializationGetter(
+      *oversimple::RequestOversamplingSettingsGetter(asyncOversampling))
+
+  , oversamplingGuiGetter(
+      *oversimple::RequestOversamplingSettingsGetter(asyncOversampling))
+
+  , oversamplingAwaiter(asyncOversampling.requestAwaiter())
+
+{
+  LookAndFeel::setDefaultLookAndFeel(&looks);
+
+  asyncOversampling.startTimer();
+}
+
+void
+OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+  asyncOversampling.submitMessage([=](OversamplingSettings& oversampling) {
+    oversampling.numSamplesPerBlock = samplesPerBlock;
+  });
+
+  floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
+
+  reset();
+
+  oversamplingAwaiter.await();
+}
+
+void
+OverdrawAudioProcessor::reset()
+{
+  splines.Reset();
+
+  constexpr double ln10 = 2.30258509299404568402;
+  constexpr double db_to_lin = ln10 / 20.0;
+
+  for (int c = 0; c < 2; ++c) {
+    inputGain[c] = exp(db_to_lin * parameters.inputGain.get(c)->get());
+    outputGain[c] = exp(db_to_lin * parameters.outputGain.get(c)->get());
+  }
+}
+
+#ifndef JucePlugin_PreferredChannelConfigurations
+bool
+OverdrawAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+{
+  if (layouts.getMainOutputChannels() == 2 ||
+      layouts.getMainInputChannels() == 2) {
+    return true;
+  }
+  return false;
+}
+#endif
+
+void
+OverdrawAudioProcessor::processBlock(AudioBuffer<float>& buffer,
+                                     MidiBuffer& midiMessages)
+{
+  auto totalNumInputChannels = getTotalNumInputChannels();
+
+  for (int c = 0; c < totalNumInputChannels; ++c) {
+    std::copy(buffer.getReadPointer(c),
+              buffer.getReadPointer(c) + buffer.getNumSamples(),
+              floatToDouble.getWritePointer(c));
+  }
+
+  for (int c = totalNumInputChannels; c < 4; ++c) {
+    floatToDouble.clear(c, 0, floatToDouble.getNumSamples());
+  }
+
+  processBlock(floatToDouble, midiMessages);
+
+  for (int c = 0; c < totalNumInputChannels; ++c) {
+    std::copy(floatToDouble.getReadPointer(c),
+              floatToDouble.getReadPointer(c) + floatToDouble.getNumSamples(),
+              buffer.getWritePointer(c));
+  }
+}
+
+void
+OverdrawAudioProcessor::getStateInformation(MemoryBlock& destData)
+{
+  oversamplingSerializationGetter.update();
+  auto& oversampling = oversamplingSerializationGetter.get();
+
+  auto oversamplingData = MemoryBlock(2 * sizeof(int));
+  ((int*)oversamplingData.getData())[0] = oversampling.order;
+  ((int*)oversamplingData.getData())[1] = oversampling.linearPhase;
+
+  auto state = parameters.apvts->copyState();
+  std::unique_ptr<XmlElement> xml(state.createXml());
+  auto paramData = MemoryBlock();
+  copyXmlToBinary(*xml, paramData);
+  destData.append(oversamplingData.getData(), oversamplingData.getSize());
+  destData.append(paramData.getData(), paramData.getSize());
+}
+
+void
+OverdrawAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+{
+  int* oversamplingData = (int*)data;
+  int order = oversamplingData[0];
+  bool linearPhase = oversamplingData[1];
+  asyncOversampling.submitMessage([=](OversamplingSettings& oversampling) {
+    oversampling.order = order;
+    oversampling.linearPhase = linearPhase;
+  });
+
+  void* paramData = (void*)((int*)data + 2);
+
+  std::unique_ptr<XmlElement> xmlState(
+    getXmlFromBinary(paramData, sizeInBytes - 2 * sizeof(int)));
+
+  if (xmlState.get() != nullptr) {
+    if (xmlState->hasTagName(parameters.apvts->state.getType())) {
+      parameters.apvts->replaceState(ValueTree::fromXml(*xmlState));
+    }
+  }
+
+  oversamplingAwaiter.await();
+}
+
+void
+OverdrawAudioProcessor::releaseResources()
+{
+  floatToDouble = AudioBuffer<double>(0, 0);
+}
+
+//==============================================================================
+OverdrawAudioProcessor::~OverdrawAudioProcessor() {}
+
+const String
+OverdrawAudioProcessor::getName() const
+{
+  return JucePlugin_Name;
+}
+
+bool
+OverdrawAudioProcessor::acceptsMidi() const
+{
+#if JucePlugin_WantsMidiInput
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool
+OverdrawAudioProcessor::producesMidi() const
+{
+#if JucePlugin_ProducesMidiOutput
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool
+OverdrawAudioProcessor::isMidiEffect() const
+{
+#if JucePlugin_IsMidiEffect
+  return true;
+#else
+  return false;
+#endif
+}
+
+double
+OverdrawAudioProcessor::getTailLengthSeconds() const
+{
+  return 0.0;
+}
+
+int
+OverdrawAudioProcessor::getNumPrograms()
+{
+  return 1; // NB: some hosts don't cope very well if you tell them there are 0
+            // programs, so this should be at least 1, even if you're not really
+            // implementing programs.
+}
+
+int
+OverdrawAudioProcessor::getCurrentProgram()
+{
+  return 0;
+}
+
+void
+OverdrawAudioProcessor::setCurrentProgram(int index)
+{}
+
+const String
+OverdrawAudioProcessor::getProgramName(int index)
+{
+  return {};
+}
+
+void
+OverdrawAudioProcessor::changeProgramName(int index, const String& newName)
+{}
+
+bool
+OverdrawAudioProcessor::hasEditor() const
+{
+  return true;
+}
+
+AudioProcessorEditor*
+OverdrawAudioProcessor::createEditor()
+{
+  return new OverdrawAudioProcessorEditor(*this);
+}
+
+AudioProcessor* JUCE_CALLTYPE
+createPluginFilter()
+{
+  return new OverdrawAudioProcessor();
+}
