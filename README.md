@@ -2,7 +2,7 @@
 
 ![Overdraw GUI](screenshot.jpg?raw=true 'Overdraw')
 
-[Overdraw](https://www.unevens.net/Overdraw.html) is an audio plug-in that implements a waveshaper in which the user can draw **the response curves of each channel using splines**.
+[Overdraw](https://www.unevens.net/Overdraw.html) is an audio plug-in that implements a waveshaper in which **the response curve of each channel is an automatable spline**.
 
 ## Features
 
@@ -37,7 +37,7 @@ VST and VST3 binaries are available at https://www.unevens.net/Overdraw.html.
     - [My fork of the HIIR](https://github.com/unevens/hiir) library by Laurent de Soras, *"a 2x Upsampler/Downsampler with two-path polyphase IIR anti-aliasing filtering"*. My fork adds support for double precision floating-point numbers, and AVX instructions.
     - [My fork](https://github.com/unevens/r8brain/tree/include)  of [r8brain-free-src](https://github.com/avaneev/r8brain-free-src), *"an high-quality pro
   audio sample rate converter / resampler C++ library"* by Aleksey Vaneev.
-- [avec](https://github.com/unevens/avec): my toolbox/stash/library for SIMD and audio, which uses Agner Fog's [vectorclass](https://github.com/vectorclass/version2) and [Boost.Align](https://www.boost.org/doc/libs/1_71_0/doc/html/align.html).
+- [avec](https://github.com/unevens/avec), my toolbox/stash/library for SIMD and audio, which uses Agner Fog's [vectorclass](https://github.com/vectorclass/version2) and [Boost.Align](https://www.boost.org/doc/libs/1_71_0/doc/html/align.html).
 
 Overdraw is released under the GNU GPLv3 license.
 
