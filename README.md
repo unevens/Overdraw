@@ -1,6 +1,6 @@
 # Overdraw
 
-![Overdraw GUI](screenshot.jpg?raw=true 'Overdraw')
+![Overdraw GUI](Images/screenshot.png?raw=true 'screenshot')
 
 [Overdraw](https://www.unevens.net/Overdraw.html) is an audio plug-in that implements a waveshaper in which **the response curve of each channel is an automatable spline**.
 
