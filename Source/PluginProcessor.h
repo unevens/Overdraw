@@ -20,6 +20,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "Linkables.h"
+#include "OversamplingParameters.h"
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
 #include "avec/dsp/Spline.hpp"
@@ -36,6 +37,8 @@ class OverdrawAudioProcessor : public AudioProcessor
 
     WaveShaperParameters waveShaper;
 
+    OversamplingParameters oversampling;
+
     std::unique_ptr<SplineParameters> spline;
 
     std::unique_ptr<AudioProcessorValueTreeState> apvts;
@@ -44,6 +47,8 @@ class OverdrawAudioProcessor : public AudioProcessor
   };
 
   Parameters parameters;
+
+  std::unique_ptr<OversamplingAttachments> oversamplingAttachments;
 
   // splines
 
@@ -57,21 +62,22 @@ class OverdrawAudioProcessor : public AudioProcessor
   // buffer for single precision processing call
   AudioBuffer<double> floatToDouble;
 
-public:
-  static constexpr int maxNumNodes = 15;
-
   // oversampling
   using Oversampling = oversimple::Oversampling<double>;
   using OversamplingSettings = oversimple::OversamplingSettings;
   oversimple::AsyncOversampling asyncOversampling;
   oversimple::OversamplingGetter<double>& oversamplingGetter;
-  oversimple::OversamplingSettingsGetter& oversamplingGuiGetter;
-  oversimple::OversamplingSettingsGetter& oversamplingSerializationGetter;
   oversimple::AsyncOversampling::Awaiter oversamplingAwaiter;
+
+public:
+  static constexpr int maxNumNodes = 15;
 
   // for gui
   SimpleLookAndFeel looks;
+
   Parameters& GetOverdrawParameters() { return parameters; }
+
+  // AudioProcessor interface
 
   //==============================================================================
   OverdrawAudioProcessor();

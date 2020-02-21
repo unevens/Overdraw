@@ -86,6 +86,11 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   midSide = CreateBoolParameter("Mid-Side", false);
 
+  oversampling = { static_cast<RangedAudioParameter*>(CreateChoiceParameter(
+                     "Oversampling", { "1x", "2x", "4x", "8x", "16x", "32x" })),
+                   createWrappedBoolParameter("Linear-Phase-Oversampling",
+                                              false) };
+
   inputGain = CreateLinkableFloatParameters("Input-Gain", 0.f, -48.f, +48.f);
 
   outputGain = CreateLinkableFloatParameters("Output-Gain", 0.f, -48.f, +48.f);
@@ -144,15 +149,12 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
   , oversamplingGetter(
       *oversimple::RequestOversamplingGetter<double>(asyncOversampling))
 
-  , oversamplingSerializationGetter(
-      *oversimple::RequestOversamplingSettingsGetter(asyncOversampling))
-
-  , oversamplingGuiGetter(
-      *oversimple::RequestOversamplingSettingsGetter(asyncOversampling))
-
   , oversamplingAwaiter(asyncOversampling.requestAwaiter())
 
 {
+  oversamplingAttachments = std::make_unique<OversamplingAttachments>(
+    *parameters.apvts, asyncOversampling, parameters.oversampling);
+
   LookAndFeel::setDefaultLookAndFeel(&looks);
 
   asyncOversampling.startTimer();
@@ -226,44 +228,21 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<float>& buffer,
 void
 OverdrawAudioProcessor::getStateInformation(MemoryBlock& destData)
 {
-  oversamplingSerializationGetter.update();
-  auto& oversampling = oversamplingSerializationGetter.get();
-
-  auto oversamplingData = MemoryBlock(2 * sizeof(int));
-  ((int*)oversamplingData.getData())[0] = oversampling.order;
-  ((int*)oversamplingData.getData())[1] = oversampling.linearPhase;
-
   auto state = parameters.apvts->copyState();
   std::unique_ptr<XmlElement> xml(state.createXml());
-  auto paramData = MemoryBlock();
-  copyXmlToBinary(*xml, paramData);
-  destData.append(oversamplingData.getData(), oversamplingData.getSize());
-  destData.append(paramData.getData(), paramData.getSize());
+  copyXmlToBinary(*xml, destData);
 }
 
 void
 OverdrawAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
-  int* oversamplingData = (int*)data;
-  int order = oversamplingData[0];
-  bool linearPhase = oversamplingData[1];
-  asyncOversampling.submitMessage([=](OversamplingSettings& oversampling) {
-    oversampling.order = order;
-    oversampling.linearPhase = linearPhase;
-  });
-
-  void* paramData = (void*)((int*)data + 2);
-
-  std::unique_ptr<XmlElement> xmlState(
-    getXmlFromBinary(paramData, sizeInBytes - 2 * sizeof(int)));
+  std::unique_ptr<XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
   if (xmlState.get() != nullptr) {
     if (xmlState->hasTagName(parameters.apvts->state.getType())) {
       parameters.apvts->replaceState(ValueTree::fromXml(*xmlState));
     }
   }
-
-  oversamplingAwaiter.await();
 }
 
 void

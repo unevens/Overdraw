@@ -25,7 +25,6 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 
 class OverdrawAudioProcessorEditor
   : public AudioProcessorEditor
-  , public Timer
 {
 public:
   OverdrawAudioProcessorEditor(OverdrawAudioProcessor&);
@@ -43,8 +42,8 @@ private:
   AttachedToggle midSideEditor;
   Label midSideLabel{ {}, "Mid-Side" };
 
-  ToggleButton linearPhase;
-  ComboBox oversampling;
+  AttachedComboBox oversampling;
+  AttachedToggle linearPhase;
   Label oversamplingLabel{ {}, "Oversampling" };
 
   LinkableControl<AttachedSlider> dryWet;
@@ -63,8 +62,6 @@ private:
   Colour backgroundColour = Colours::black.withAlpha(0.6f);
 
   Image background;
-
-  void timerCallback() override;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OverdrawAudioProcessorEditor)
 };
