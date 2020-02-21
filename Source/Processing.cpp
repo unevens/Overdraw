@@ -74,26 +74,16 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // get the oversampling processors
 
-  bool resetFlag = false;
-
   oversamplingGetter.update();
   auto& oversampling = oversamplingGetter.get();
 
-  if (oversampling.isNew) {
-    oversampling.isNew = false;
-    resetFlag = true;
-  }
-
   bool const isMidSideEnabled = parameters.midSide->get();
 
-  if (lastIsMidSideEnabled != isMidSideEnabled) {
-    lastIsMidSideEnabled = isMidSideEnabled;
-    resetFlag = true;
-  }
-
-  resetFlag = resetFlag || parameters.spline->needsReset();
-
   auto spline = parameters.spline->updateSpline(splines);
+
+  if (parameters.spline->needsReset()) {
+    spline->Reset();
+  }
 
   double const frequencyCoef =
     MathConstants<double>::twoPi / (getSampleRate() * oversampling.GetRate());
@@ -117,10 +107,6 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   double const automationAlpha = exp(-frequencyCoef / (0.001 * automationTime));
 
   spline->SetSmoothingFrequency(automationAlpha);
-
-  if (resetFlag) {
-    reset();
-  }
 
   // mid side
 

@@ -51,10 +51,6 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   double automationTime = 50.0;
 
-  // state
-
-  bool lastIsMidSideEnabled = false;
-
   double inputGain[2] = { 1.0, 1.0 };
   double outputGain[2] = { 1.0, 1.0 };
 
