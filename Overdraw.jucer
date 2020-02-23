@@ -5,7 +5,7 @@
               companyName="unevens" companyCopyright="Copyright Dario Mambro 2019"
               companyWebsite="www.unevens.net" companyEmail="hi@unevens.net"
               headerPath="../../oversimple&#10;../../oversimple/avec&#10;../../oversimple/avec/vectorclass&#10;../../oversimple/r8brain&#10;../../juicy&#10;$(BOOST_INCLUDEDIR)&#10;"
-              defines="R8B_PFFFT_DOUBLE=1">
+              defines="R8B_PFFFT_DOUBLE=1&#10;NOMINMAX=1">
   <MAINGROUP id="Ayh0pr" name="Overdraw">
     <GROUP id="{EB05EC87-04BF-C292-EA04-5ABBF5D410E0}" name="Images">
       <FILE id="sbku7d" name="background.png" compile="0" resource="1" file="Images/background.png"/>
