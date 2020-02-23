@@ -75,7 +75,7 @@ public:
   // for gui
   SimpleLookAndFeel looks;
 
-  Parameters& GetOverdrawParameters() { return parameters; }
+  Parameters& getOverdrawParameters() { return parameters; }
 
   // AudioProcessor interface
 

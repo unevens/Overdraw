@@ -21,7 +21,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "avec/dsp/SplineMacro.hpp"
 
 static void
-LeftRightToMidSide(double** io, int const n)
+leftRightToMidSide(double** io, int const n)
 {
   for (int i = 0; i < n; ++i) {
     double m = 0.5 * (io[0][i] + io[1][i]);
@@ -32,7 +32,7 @@ LeftRightToMidSide(double** io, int const n)
 }
 
 static void
-MidSideToLeftRight(double** io, int const n)
+midSideToLeftRight(double** io, int const n)
 {
   for (int i = 0; i < n; ++i) {
     double l = io[0][i] + io[1][i];
@@ -43,7 +43,7 @@ MidSideToLeftRight(double** io, int const n)
 }
 
 static void
-ApplyGain(double** io,
+applyGain(double** io,
           double* gain_target,
           double* gain_state,
           double const alpha,
@@ -82,11 +82,11 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   auto spline = parameters.spline->updateSpline(splines);
 
   if (parameters.spline->needsReset()) {
-    spline->Reset();
+    spline->reset();
   }
 
   double const frequencyCoef =
-    MathConstants<double>::twoPi / (getSampleRate() * oversampling.GetRate());
+    MathConstants<double>::twoPi / (getSampleRate() * oversampling.getRate());
 
   double inputGainTarget[2];
   double outputGainTarget[2];
@@ -96,40 +96,40 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     outputGainTarget[c] = exp(db_to_lin * parameters.outputGain.get(c)->get());
     inputGainTarget[c] = exp(db_to_lin * parameters.inputGain.get(c)->get());
 
-    spline->SetIsSymmetric(
+    spline->setIsSymmetric(
       parameters.waveShaper.symmetry.get(c)->getValue() ? 1.0 : 0.0, c);
-    spline->SetDc(parameters.waveShaper.dc.get(c)->get(), c);
-    spline->SetWet(0.01f * parameters.waveShaper.dryWet.get(c)->get(), c);
-    spline->SetHighPassFrequency(
+    spline->setDc(parameters.waveShaper.dc.get(c)->get(), c);
+    spline->setWet(0.01f * parameters.waveShaper.dryWet.get(c)->get(), c);
+    spline->setHighPassFrequency(
       frequencyCoef * parameters.waveShaper.dcCutoff.get(c)->get(), c);
   }
 
   double const automationAlpha = exp(-frequencyCoef / (0.001 * automationTime));
 
-  spline->SetSmoothingFrequency(automationAlpha);
+  spline->setSmoothingFrequency(automationAlpha);
 
   // mid side
 
   if (isMidSideEnabled) {
-    LeftRightToMidSide(ioAudio, numSamples);
+    leftRightToMidSide(ioAudio, numSamples);
   }
 
   // input gain
 
-  ApplyGain(ioAudio, inputGainTarget, inputGain, automationAlpha, numSamples);
+  applyGain(ioAudio, inputGainTarget, inputGain, automationAlpha, numSamples);
 
   // early return if no nodes are active
 
   if (!spline) {
     // output gain
 
-    ApplyGain(
+    applyGain(
       ioAudio, outputGainTarget, outputGain, automationAlpha, numSamples);
 
     // mid side
 
     if (isMidSideEnabled) {
-      MidSideToLeftRight(ioAudio, numSamples);
+      midSideToLeftRight(ioAudio, numSamples);
     }
 
     return;
@@ -137,10 +137,10 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // oversampling
 
-  oversampling.PrepareBuffers(numSamples); // extra safety measure
+  oversampling.prepareBuffers(numSamples); // extra safety measure
 
   int const numUpsampledSamples =
-    oversampling.scalarToVecUpsamplers[0]->ProcessBlock(ioAudio, 2, numSamples);
+    oversampling.scalarToVecUpsamplers[0]->processBlock(ioAudio, 2, numSamples);
 
   if (numUpsampledSamples == 0) {
     for (auto i = 0; i < totalNumOutputChannels; ++i) {
@@ -149,25 +149,25 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     return;
   }
 
-  auto& upsampledBuffer = oversampling.scalarToVecUpsamplers[0]->GetOutput();
-  auto& upsampled_io = upsampledBuffer.GetBuffer2(0);
+  auto& upsampledBuffer = oversampling.scalarToVecUpsamplers[0]->getOutput();
+  auto& upsampled_io = upsampledBuffer.getBuffer2(0);
 
   // processing
 
-  spline->ProcessBlock(upsampled_io, upsampled_io);
+  spline->processBlock(upsampled_io, upsampled_io);
 
   // downsample
 
-  oversampling.vecToScalarDownsamplers[0]->ProcessBlock(
+  oversampling.vecToScalarDownsamplers[0]->processBlock(
     upsampledBuffer, ioAudio, 2, numSamples);
 
   // output gain
 
-  ApplyGain(ioAudio, outputGainTarget, outputGain, automationAlpha, numSamples);
+  applyGain(ioAudio, outputGainTarget, outputGain, automationAlpha, numSamples);
 
   // mid side
 
   if (isMidSideEnabled) {
-    MidSideToLeftRight(ioAudio, numSamples);
+    midSideToLeftRight(ioAudio, numSamples);
   }
 }

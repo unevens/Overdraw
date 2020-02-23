@@ -27,52 +27,52 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   , processor(p)
 
-  , splineEditor(*p.GetOverdrawParameters().spline,
-                 *p.GetOverdrawParameters().apvts,
-                 &p.GetOverdrawParameters().waveShaper)
+  , splineEditor(*p.getOverdrawParameters().spline,
+                 *p.getOverdrawParameters().apvts,
+                 &p.getOverdrawParameters().waveShaper)
 
-  , nodeEditor(*p.GetOverdrawParameters().spline,
-               *p.GetOverdrawParameters().apvts)
+  , nodeEditor(*p.getOverdrawParameters().spline,
+               *p.getOverdrawParameters().apvts)
 
-  , midSideEditor(*this, *p.GetOverdrawParameters().apvts, "Mid-Side")
+  , midSideEditor(*this, *p.getOverdrawParameters().apvts, "Mid-Side")
 
-  , inputGain(*p.GetOverdrawParameters().apvts,
+  , inputGain(*p.getOverdrawParameters().apvts,
               "Input Gain",
-              p.GetOverdrawParameters().inputGain)
+              p.getOverdrawParameters().inputGain)
 
-  , outputGain(*p.GetOverdrawParameters().apvts,
+  , outputGain(*p.getOverdrawParameters().apvts,
                "Output Gain",
-               p.GetOverdrawParameters().outputGain)
+               p.getOverdrawParameters().outputGain)
 
-  , symmetry(*p.GetOverdrawParameters().apvts,
+  , symmetry(*p.getOverdrawParameters().apvts,
              "Symmetric",
-             p.GetOverdrawParameters().waveShaper.symmetry)
+             p.getOverdrawParameters().waveShaper.symmetry)
 
-  , dc(*p.GetOverdrawParameters().apvts,
+  , dc(*p.getOverdrawParameters().apvts,
        "DC",
-       p.GetOverdrawParameters().waveShaper.dc)
+       p.getOverdrawParameters().waveShaper.dc)
 
-  , dryWet(*p.GetOverdrawParameters().apvts,
+  , dryWet(*p.getOverdrawParameters().apvts,
            "Wet",
-           p.GetOverdrawParameters().waveShaper.dryWet)
+           p.getOverdrawParameters().waveShaper.dryWet)
 
-  , highPass(*p.GetOverdrawParameters().apvts,
+  , highPass(*p.getOverdrawParameters().apvts,
              "HP Frequency",
-             p.GetOverdrawParameters().waveShaper.dcCutoff)
+             p.getOverdrawParameters().waveShaper.dcCutoff)
 
-  , channelLabels(*p.GetOverdrawParameters().apvts, "Mid-Side")
+  , channelLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
-  , inputGainLabels(*p.GetOverdrawParameters().apvts, "Mid-Side")
+  , inputGainLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
-  , outputGainLabels(*p.GetOverdrawParameters().apvts, "Mid-Side")
+  , outputGainLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
   , oversampling(*this,
-                 *p.GetOverdrawParameters().apvts,
+                 *p.getOverdrawParameters().apvts,
                  "Oversampling",
                  { "1x", "2x", "4x", "8x", "16x", "32x" })
 
   , linearPhase(*this,
-                *p.GetOverdrawParameters().apvts,
+                *p.getOverdrawParameters().apvts,
                 "Linear-Phase-Oversampling")
 
   , background(ImageCache::getFromMemory(BinaryData::background_png,

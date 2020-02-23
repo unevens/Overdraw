@@ -133,21 +133,21 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 #endif
   , parameters(*this)
 
-  , splines(avec::SplineHolder<avec::WaveShaper, Vec2d>::New<maxNumNodes>())
+  , splines(avec::SplineHolder<avec::WaveShaper, Vec2d>::make<maxNumNodes>())
 
   , asyncOversampling([this] {
     auto oversampling = OversamplingSettings{};
     oversampling.numScalarToVecUpsamplers = 2;
     oversampling.numVecToScalarDownsamplers = 1;
     oversampling.numChannels = 2;
-    oversampling.UpdateLatency = [this](int latency) {
+    oversampling.updateLatency = [this](int latency) {
       setLatencySamples(latency);
     };
     return oversampling;
   }())
 
   , oversamplingGetter(
-      *oversimple::RequestOversamplingGetter<double>(asyncOversampling))
+      *oversimple::requestOversamplingGetter<double>(asyncOversampling))
 
   , oversamplingAwaiter(asyncOversampling.requestAwaiter())
 
@@ -177,7 +177,7 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 void
 OverdrawAudioProcessor::reset()
 {
-  splines.Reset();
+  splines.reset();
 
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;
