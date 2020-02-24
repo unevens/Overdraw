@@ -192,7 +192,7 @@ OverdrawAudioProcessor::reset()
 bool
 OverdrawAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-  if (layouts.getMainOutputChannels() == 2 ||
+  if (layouts.getMainOutputChannels() == 2 &&
       layouts.getMainInputChannels() == 2) {
     return true;
   }
