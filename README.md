@@ -2,7 +2,7 @@
 
 ![Overdraw GUI](Images/screenshot.jpg?raw=true 'screenshot')
 
-[Overdraw](https://www.unevens.net/Overdraw.html) is an audio plug-in that implements a waveshaper in which **the response curve of each channel is an automatable spline**.
+[Overdraw](https://www.unevens.net/overdraw.html) is an audio plug-in that implements a waveshaper in which **the response curve of each channel is an automatable spline**.
 
 ## Features
 
