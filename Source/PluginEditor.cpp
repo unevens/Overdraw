@@ -96,8 +96,8 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   AttachSplineEditorsAndInitialize(splineEditor, nodeEditor);
 
-  oversamplingLabel.setFont(Font(20, Font::bold));
-  midSideLabel.setFont(Font(20, Font::bold));
+  oversamplingLabel.setFont(Font(20._p, Font::bold));
+  midSideLabel.setFont(Font(20._p, Font::bold));
 
   oversamplingLabel.setJustificationType(Justification::centred);
   midSideLabel.setJustificationType(Justification::centred);
@@ -128,7 +128,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   applyTableSettings(symmetry);
   applyTableSettings(highPass);
 
-  url.setFont({ 14, Font::bold });
+  url.setFont({ 14._p, Font::bold });
   url.setJustification(Justification::centred);
   url.setReadOnly(true);
   url.setColour(TextEditor::ColourIds::focusedOutlineColourId, Colours::white);
@@ -143,7 +143,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   url.setText("www.unevens.net", dontSendNotification);
   url.setJustification(Justification::left);
 
-  setSize(720, 890);
+  setSize(720._p, 890._p);
 }
 
 OverdrawAudioProcessorEditor::~OverdrawAudioProcessorEditor() {}
@@ -154,11 +154,11 @@ OverdrawAudioProcessorEditor::paint(Graphics& g)
   g.drawImage(background, getLocalBounds().toFloat());
 
   g.setColour(backgroundColour);
-  g.fillRect(532, 10, 160, 330);
+  g.fillRect(juce::Rectangle<int>(532._p, 10._p, 168._p, 342._p));
 
   g.setColour(lineColour);
-  g.drawRect(532, 10, 160, 64, 1);
-  g.drawRect(532, 10, 160, 150, 1);
+  g.drawRect(532._p, 10._p, 168._p, 64._p, 1);
+  g.drawRect(532._p, 10._p, 168._p, 162._p, 1);
 
   g.drawRect(splineEditor.getBounds().expanded(1, 1), 1);
 }
@@ -166,61 +166,63 @@ OverdrawAudioProcessorEditor::paint(Graphics& g)
 void
 OverdrawAudioProcessorEditor::resized()
 {
-  constexpr int offset = 10;
-  constexpr int rowHeight = 40;
-  constexpr int splineEditorSide = 500;
-  constexpr int nodeEditorHeight = 160;
+  constexpr auto offset = 10._p;
+  constexpr auto rowHeight = 40._p;
+  constexpr auto splineEditorSide = 500._p;
+  constexpr auto nodeEditorHeight = 160._p;
 
   splineEditor.setTopLeftPosition(offset + 1, offset + 1);
   splineEditor.setSize(splineEditorSide - 2, splineEditorSide - 2);
 
   nodeEditor.setTopLeftPosition(offset, splineEditorSide + 2 * offset);
-  nodeEditor.setSize(4 * 140 + 50 - 4, 160);
+  nodeEditor.setSize(140._p * 4 + (50._p), 160._p);
 
   int const gainLeft = splineEditor.getBounds().getRight() + offset + 1;
   int const outputGainBottom = splineEditor.getBounds().getBottom() + 1;
-  int const outputGainTop = outputGainBottom - 160;
-  int const inputGainTop = outputGainTop - 160 - offset;
+  int const outputGainTop = outputGainBottom - 160._p;
+  int const inputGainTop = outputGainTop - 160._p - offset;
 
   inputGainLabels.setTopLeftPosition(gainLeft, inputGainTop);
-  inputGainLabels.setSize(50, 160);
+  inputGainLabels.setSize(50._p, 160._p);
 
-  inputGain.setTopLeftPosition(gainLeft + 49, inputGainTop);
-  inputGain.setSize(140, 160);
+  inputGain.setTopLeftPosition(gainLeft + 50._p - 1, inputGainTop);
+  inputGain.setSize(140._p, 160._p);
 
   outputGainLabels.setTopLeftPosition(gainLeft, outputGainTop);
-  outputGainLabels.setSize(50, 160);
+  outputGainLabels.setSize(50._p, 160._p);
 
-  outputGain.setTopLeftPosition(gainLeft + 49, outputGainTop);
-  outputGain.setSize(140, 160);
+  outputGain.setTopLeftPosition(gainLeft + 50._p - 1, outputGainTop);
+  outputGain.setSize(140._p, 160._p);
 
   int const top = nodeEditor.getBounds().getBottom() + offset;
 
-  int left = 10;
+  int left = 10._p;
 
-  auto const resize = [&](auto& component, int width = 140) {
+  auto const resize = [&](auto& component, int width) {
     component.setTopLeftPosition(left, top);
-    component.setSize(width, 160);
+    component.setSize(width, 160._p);
     left += width - 1;
   };
 
-  resize(channelLabels, 50);
+  resize(channelLabels, 50._p);
 
-  resize(dryWet);
-  resize(symmetry);
-  resize(dc);
-  resize(highPass);
+  resize(dryWet, 140._p);
+  resize(symmetry, 140._p);
+  resize(dc, 140._p);
+  resize(highPass, 140._p);
 
-  left += 10;
+  left += 10._p;
 
   Grid grid;
   using Track = Grid::TrackInfo;
 
   grid.templateColumns = { Track(1_fr) };
 
-  grid.templateRows = {
-    Track(30_px), Track(30_px), Track(30_px), Track(30_px), Track(30_px)
-  };
+  grid.templateRows = { Track(Grid::Px(30._p)),
+                        Track(Grid::Px(30._p)),
+                        Track(Grid::Px(30._p)),
+                        Track(Grid::Px(36._p)),
+                        Track(Grid::Px(36._p)) };
 
   grid.items = { GridItem(midSideLabel),
                  GridItem(midSideEditor.getControl())
@@ -240,13 +242,13 @@ OverdrawAudioProcessorEditor::resized()
   grid.justifyContent = Grid::JustifyContent::center;
   grid.alignContent = Grid::AlignContent::center;
 
-  grid.performLayout(
-    juce::Rectangle(splineEditorSide + 2 * offset + 12, 10, 150, 150));
+  grid.performLayout(juce::Rectangle<int>(
+    splineEditorSide + 2 * offset + 12._p, offset, 168._p, 162._p));
 
-  url.setTopLeftPosition(10, getHeight() - 18);
-  url.setSize(160, 16);
+  url.setTopLeftPosition(10._p, getHeight() - 18._p);
+  url.setSize(160._p, 16._p);
 
-  splineEditor.areaInWhichToDrawNodes = juce::Rectangle(
+  splineEditor.areaInWhichToDrawNodes = juce::Rectangle<int>(
     splineEditor.getPosition().x,
     splineEditor.getPosition().x,
     jmax(splineEditor.getWidth(), nodeEditor.getWidth()),

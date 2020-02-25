@@ -27,6 +27,18 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "oversimple/AsyncOversampling.hpp"
 #include <JuceHeader.h>
 
+
+#ifndef OVERDRAW_UI_SCALE
+#define OVERDRAW_UI_SCALE 0.8f
+#endif
+
+static constexpr float uiGlobalScaleFactor = OVERDRAW_UI_SCALE;
+
+constexpr static long double operator"" _p(long double px)
+{
+  return px * uiGlobalScaleFactor;
+}
+
 class OverdrawAudioProcessor : public AudioProcessor
 {
   struct Parameters

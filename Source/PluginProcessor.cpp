@@ -155,6 +155,10 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
   oversamplingAttachments = std::make_unique<OversamplingAttachments>(
     *parameters.apvts, asyncOversampling, parameters.oversampling);
 
+  looks.simpleFontSize *= uiGlobalScaleFactor;
+  looks.simpleSliderLabelFontSize *= uiGlobalScaleFactor;
+  looks.simpleRotarySliderOffset *= uiGlobalScaleFactor;
+
   LookAndFeel::setDefaultLookAndFeel(&looks);
 
   asyncOversampling.startTimer();
