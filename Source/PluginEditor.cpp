@@ -249,8 +249,8 @@ OverdrawAudioProcessorEditor::resized()
   url.setSize(160._p, 16._p);
 
   splineEditor.areaInWhichToDrawNodes = juce::Rectangle<int>(
-    splineEditor.getPosition().x,
-    splineEditor.getPosition().x,
+    nodeEditor.getPosition().x,
+    splineEditor.getBottom() - offset,
     jmax(splineEditor.getWidth(), nodeEditor.getWidth()),
-    nodeEditor.getPosition().y + nodeEditor.getHeight() + offset);
+    nodeEditor.getBottom() - splineEditor.getBottom() + offset);
 }
