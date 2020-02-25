@@ -121,16 +121,13 @@ OverdrawAudioProcessor::Parameters::Parameters(
 }
 
 OverdrawAudioProcessor::OverdrawAudioProcessor()
+
 #ifndef JucePlugin_PreferredChannelConfigurations
   : AudioProcessor(BusesProperties()
-#if !JucePlugin_IsMidiEffect
-#if !JucePlugin_IsSynth
                      .withInput("Input", AudioChannelSet::stereo(), true)
+                     .withOutput("Output", AudioChannelSet::stereo(), true))
 #endif
-                     .withOutput("Output", AudioChannelSet::stereo(), true)
-#endif
-                     )
-#endif
+
   , parameters(*this)
 
   , splines(avec::SplineHolder<avec::WaveShaper, Vec2d>::make<maxNumNodes>())
