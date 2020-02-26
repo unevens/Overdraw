@@ -81,7 +81,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   auto spline = parameters.spline->updateSpline(splines);
 
-  if (parameters.spline->needsReset()) {
+  if (spline && parameters.spline->needsReset()) {
     spline->reset();
   }
 
@@ -96,17 +96,17 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     outputGainTarget[c] = exp(db_to_lin * parameters.outputGain.get(c)->get());
     inputGainTarget[c] = exp(db_to_lin * parameters.inputGain.get(c)->get());
 
-    spline->setIsSymmetric(
-      parameters.waveShaper.symmetry.get(c)->getValue() ? 1.0 : 0.0, c);
-    spline->setDc(parameters.waveShaper.dc.get(c)->get(), c);
-    spline->setWet(0.01f * parameters.waveShaper.dryWet.get(c)->get(), c);
-    spline->setHighPassFrequency(
-      frequencyCoef * parameters.waveShaper.dcCutoff.get(c)->get(), c);
+    if (spline) {
+      spline->setIsSymmetric(
+        parameters.waveShaper.symmetry.get(c)->getValue() ? 1.0 : 0.0, c);
+      spline->setDc(parameters.waveShaper.dc.get(c)->get(), c);
+      spline->setWet(0.01f * parameters.waveShaper.dryWet.get(c)->get(), c);
+      spline->setHighPassFrequency(
+        frequencyCoef * parameters.waveShaper.dcCutoff.get(c)->get(), c);
+    }
   }
 
   double const automationAlpha = exp(-frequencyCoef / (0.001 * automationTime));
-
-  spline->setSmoothingFrequency(automationAlpha);
 
   // mid side
 
@@ -134,6 +134,8 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
     return;
   }
+
+  spline->setSmoothingFrequency(automationAlpha);
 
   // oversampling
 
