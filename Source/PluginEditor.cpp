@@ -107,15 +107,14 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   lineColour = p.looks.frontColour.darker(1.f);
 
   auto tableSettings = LinkableControlTable();
+  tableSettings.lineColour = lineColour;
+  tableSettings.backgroundColour = backgroundColour;
+  nodeEditor.setTableSettings(tableSettings);
 
   auto const applyTableSettings = [&](auto& linkedControls) {
     linkedControls.tableSettings.lineColour = lineColour;
     linkedControls.tableSettings.backgroundColour = backgroundColour;
   };
-
-  tableSettings.lineColour = lineColour;
-  tableSettings.backgroundColour = backgroundColour;
-  nodeEditor.setTableSettings(tableSettings);
 
   applyTableSettings(inputGain);
   applyTableSettings(inputGainLabels);
@@ -127,6 +126,13 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   applyTableSettings(dryWet);
   applyTableSettings(symmetry);
   applyTableSettings(highPass);
+
+  for (int c = 0; c < 2; ++c) {
+    outputGain.getControl(c).setTextValueSuffix("dB");
+    inputGain.getControl(c).setTextValueSuffix("dB");
+    dryWet.getControl(c).setTextValueSuffix("%");
+    highPass.getControl(c).setTextValueSuffix("Hz");
+  }
 
   url.setFont({ 14._p, Font::bold });
   url.setJustification(Justification::centred);
