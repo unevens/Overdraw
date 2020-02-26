@@ -29,7 +29,7 @@ You'll need [Projucer](https://shop.juce.com/get-juce) to open the file `Overdra
 
 Overdraw is developed and tested on Windows and Ubuntu. It may also work on macOS, but I can neither confirm nor deny.
 
-VST and VST3 binaries are available at https://www.unevens.net/Overdraw.html.
+VST and VST3 binaries are available at https://www.unevens.net/overdraw.html.
 
 ## Submodules, libraries, credits
 
