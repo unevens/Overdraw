@@ -105,13 +105,21 @@ OverdrawAudioProcessor::Parameters::Parameters(
   waveShaper.dcCutoff =
     CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
 
+  auto const isNodeActive = [&](int nodeIndex) {
+    std::array<int, 4> enabledNodeIndices = { 6, 7, 9, 11 };
+    return enabledNodeIndices.end() != std::find(enabledNodeIndices.begin(),
+                                                 enabledNodeIndices.end(),
+                                                 nodeIndex);
+  };
+
   spline = std::unique_ptr<SplineParameters>(
     new SplineParameters("",
                          parameters,
                          OverdrawAudioProcessor::maxNumNodes,
                          { -2.f, 2.f, 0.0001f },
                          { -2.f, 2.f, 0.0001f },
-                         { -20.f, 20.f, 0.01f }));
+                         { -20.f, 20.f, 0.01f },
+                         isNodeActive));
 
   apvts = std::unique_ptr<AudioProcessorValueTreeState>(
     new AudioProcessorValueTreeState(processor,
