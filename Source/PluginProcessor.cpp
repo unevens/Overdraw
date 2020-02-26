@@ -106,7 +106,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
     CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
 
   spline = std::unique_ptr<SplineParameters>(
-    new SplineParameters("Spline",
+    new SplineParameters("",
                          parameters,
                          OverdrawAudioProcessor::maxNumNodes,
                          { -2.f, 2.f, 0.0001f },
