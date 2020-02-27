@@ -31,7 +31,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
                  *p.getOverdrawParameters().apvts,
                  &p.getOverdrawParameters().waveShaper)
 
-  , nodeEditor(*p.getOverdrawParameters().spline,
+  , knotEditor(*p.getOverdrawParameters().spline,
                *p.getOverdrawParameters().apvts)
 
   , midSideEditor(*this, *p.getOverdrawParameters().apvts, "Mid-Side")
@@ -80,7 +80,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
 {
   addAndMakeVisible(splineEditor);
-  addAndMakeVisible(nodeEditor);
+  addAndMakeVisible(knotEditor);
   addAndMakeVisible(inputGain);
   addAndMakeVisible(outputGain);
   addAndMakeVisible(oversamplingLabel);
@@ -94,7 +94,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(outputGainLabels);
   addAndMakeVisible(url);
 
-  AttachSplineEditorsAndInitialize(splineEditor, nodeEditor);
+  AttachSplineEditorsAndInitialize(splineEditor, knotEditor);
 
   oversamplingLabel.setFont(Font(20._p, Font::bold));
   midSideLabel.setFont(Font(20._p, Font::bold));
@@ -109,7 +109,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   auto tableSettings = LinkableControlTable();
   tableSettings.lineColour = lineColour;
   tableSettings.backgroundColour = backgroundColour;
-  nodeEditor.setTableSettings(tableSettings);
+  knotEditor.setTableSettings(tableSettings);
 
   auto const applyTableSettings = [&](auto& linkedControls) {
     linkedControls.tableSettings.lineColour = lineColour;
@@ -175,13 +175,13 @@ OverdrawAudioProcessorEditor::resized()
   constexpr auto offset = 10._p;
   constexpr auto rowHeight = 40._p;
   constexpr auto splineEditorSide = 500._p;
-  constexpr auto nodeEditorHeight = 160._p;
+  constexpr auto knotEditorHeight = 160._p;
 
   splineEditor.setTopLeftPosition(offset + 1, offset + 1);
   splineEditor.setSize(splineEditorSide - 2, splineEditorSide - 2);
 
-  nodeEditor.setTopLeftPosition(offset, splineEditorSide + 2 * offset);
-  nodeEditor.setSize(140._p * 4 + (50._p), 160._p);
+  knotEditor.setTopLeftPosition(offset, splineEditorSide + 2 * offset);
+  knotEditor.setSize(140._p * 4 + (50._p), 160._p);
 
   int const gainLeft = splineEditor.getBounds().getRight() + offset + 1;
   int const outputGainBottom = splineEditor.getBounds().getBottom() + 1;
@@ -200,7 +200,7 @@ OverdrawAudioProcessorEditor::resized()
   outputGain.setTopLeftPosition(gainLeft + 50._p - 1, outputGainTop);
   outputGain.setSize(140._p, 160._p);
 
-  int const top = nodeEditor.getBounds().getBottom() + offset;
+  int const top = knotEditor.getBounds().getBottom() + offset;
 
   int left = 10._p;
 
@@ -254,9 +254,9 @@ OverdrawAudioProcessorEditor::resized()
   url.setTopLeftPosition(10._p, getHeight() - 18._p);
   url.setSize(160._p, 16._p);
 
-  splineEditor.areaInWhichToDrawNodes = juce::Rectangle<int>(
-    nodeEditor.getPosition().x,
+  splineEditor.areaInWhichToDrawKnots = juce::Rectangle<int>(
+    knotEditor.getPosition().x,
     splineEditor.getBottom() - offset,
-    jmax(splineEditor.getWidth(), nodeEditor.getWidth()),
-    nodeEditor.getBottom() - splineEditor.getBottom() + offset);
+    jmax(splineEditor.getWidth(), knotEditor.getWidth()),
+    knotEditor.getBottom() - splineEditor.getBottom() + offset);
 }

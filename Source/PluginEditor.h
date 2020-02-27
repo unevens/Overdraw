@@ -37,7 +37,7 @@ private:
   OverdrawAudioProcessor& processor;
 
   SplineEditor splineEditor;
-  SplineNodeEditor nodeEditor;
+  SplineKnotEditor knotEditor;
 
   AttachedToggle midSideEditor;
   Label midSideLabel{ {}, "Mid-Side" };

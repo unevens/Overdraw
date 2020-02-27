@@ -118,7 +118,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   applyGain(ioAudio, inputGainTarget, inputGain, automationAlpha, numSamples);
 
-  // early return if no nodes are active
+  // early return if no knots are active
 
   if (!spline) {
     // output gain

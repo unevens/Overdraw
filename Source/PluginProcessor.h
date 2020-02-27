@@ -82,7 +82,7 @@ class OverdrawAudioProcessor : public AudioProcessor
   oversimple::AsyncOversampling::Awaiter oversamplingAwaiter;
 
 public:
-  static constexpr int maxNumNodes = 15;
+  static constexpr int maxNumKnots = 15;
 
   // for gui
   SimpleLookAndFeel looks;
