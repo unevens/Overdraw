@@ -136,6 +136,8 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
     highPass.getControl(c).setTextValueSuffix("Hz");
   }
 
+  smoothing.getControl().setTextValueSuffix("ms");
+
   url.setFont({ 14._p, Font::bold });
   url.setJustification(Justification::centred);
   url.setReadOnly(true);
