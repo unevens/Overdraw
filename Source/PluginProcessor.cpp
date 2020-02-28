@@ -108,7 +108,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
     CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
 
   auto const isKnotActive = [&](int knotIndex) {
-    std::array<int, 4> enabledKnotIndices = { 6, 7, 9, 11 };
+    std::array<int, 4> enabledKnotIndices = { 7, 9, 11 };
     return enabledKnotIndices.end() != std::find(enabledKnotIndices.begin(),
                                                  enabledKnotIndices.end(),
                                                  knotIndex);
