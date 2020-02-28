@@ -96,7 +96,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(outputGainLabels);
   addAndMakeVisible(url);
 
-  AttachSplineEditorsAndInitialize(spline, selectedKnot, 7);
+  attachAndInitializeSplineEditors(spline, selectedKnot, 7);
 
   oversamplingLabel.setFont(Font(20._p, Font::bold));
 
