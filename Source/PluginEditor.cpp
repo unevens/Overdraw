@@ -153,7 +153,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   url.setText("www.unevens.net", dontSendNotification);
   url.setJustification(Justification::left);
 
-  setSize(750._p, 920._p);
+  setSize(760._p, 930._p);
 }
 
 OverdrawAudioProcessorEditor::~OverdrawAudioProcessorEditor() {}
@@ -164,12 +164,12 @@ OverdrawAudioProcessorEditor::paint(Graphics& g)
   g.drawImage(background, getLocalBounds().toFloat());
 
   g.setColour(backgroundColour);
-  g.fillRect(juce::Rectangle<int>(562._p, 10._p, 168._p, 190._p));
+  g.fillRect(juce::Rectangle<int>(572._p, 10._p, 168._p, 190._p));
 
   g.setColour(lineColour);
-  g.drawRect(562._p, 10._p, 168._p, 35._p, 1);
-  g.drawRect(562._p, 10._p, 168._p, 100._p, 1);
-  g.drawRect(562._p, 10._p, 168._p, 190._p, 1);
+  g.drawRect(572._p, 10._p, 168._p, 40._p, 1);
+  g.drawRect(572._p, 10._p, 168._p, 105._p, 1);
+  g.drawRect(572._p, 10._p, 168._p, 200._p, 1);
 
   g.drawRect(spline.getBounds().expanded(1, 1), 1);
 }
@@ -179,7 +179,7 @@ OverdrawAudioProcessorEditor::resized()
 {
   constexpr auto offset = 10._p;
   constexpr auto rowHeight = 40._p;
-  constexpr auto splineEditorSide = 530._p;
+  constexpr auto splineEditorSide = 540._p;
   constexpr auto knotEditorHeight = 160._p;
 
   spline.setTopLeftPosition(offset + 1, offset + 1);
@@ -229,13 +229,14 @@ OverdrawAudioProcessorEditor::resized()
 
   grid.templateColumns = { Track(1_fr) };
 
-  grid.templateRows = { Track(Grid::Px(30._p)), Track(Grid::Px(30._p)),
+  grid.templateRows = { Track(Grid::Px(35._p)), Track(Grid::Px(30._p)),
                         Track(Grid::Px(40._p)), Track(Grid::Px(30._p)),
-                        Track(Grid::Px(30._p)), Track(Grid::Px(30._p)) };
+                        Track(Grid::Px(30._p)), Track(Grid::Px(35._p)) };
 
   grid.items = { GridItem(midSide.getControl())
                    .withWidth(120._p)
-                   .withAlignSelf(GridItem::AlignSelf::center)
+                   .withHeight(30._p)
+                   .withAlignSelf(GridItem::AlignSelf::end)
                    .withJustifySelf(GridItem::JustifySelf::center),
                  GridItem(smoothingLabel)
                    .withAlignSelf(GridItem::AlignSelf::start)
@@ -258,7 +259,7 @@ OverdrawAudioProcessorEditor::resized()
   grid.alignContent = Grid::AlignContent::center;
 
   grid.performLayout(juce::Rectangle<int>(
-    splineEditorSide + 2 * offset, offset + 15._p, 190._p, 162._p));
+    splineEditorSide + 2 * offset, offset + 20._p, 200._p, 162._p));
 
   url.setTopLeftPosition(10._p, getHeight() - 18._p);
   url.setSize(160._p, 16._p);
