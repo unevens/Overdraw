@@ -13,7 +13,7 @@
 - Optional DC offset.
 - Optional DC removal filter.
 - Optional symmtric spline editing.
-- Up to 32x Oversampling with either Minimum or Linear Phase.
+- Up to 32x Oversampling with either Minimum Phase or Linear Phase Antialiasing.
 
 ## Build
 
