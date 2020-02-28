@@ -14,6 +14,7 @@
 - Optional DC removal filter.
 - Optional symmtric spline editing.
 - Up to 32x Oversampling with either Minimum Phase or Linear Phase Antialiasing.
+- Customizable smoothing time, used to avoid zips when automating the knots of the splines, and the input and output gains.
 
 ## Build
 
