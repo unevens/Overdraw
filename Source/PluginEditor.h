@@ -23,8 +23,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "SplineEditor.h"
 #include <JuceHeader.h>
 
-class OverdrawAudioProcessorEditor
-  : public AudioProcessorEditor
+class OverdrawAudioProcessorEditor : public AudioProcessorEditor
 {
 public:
   OverdrawAudioProcessorEditor(OverdrawAudioProcessor&);
@@ -36,11 +35,12 @@ public:
 private:
   OverdrawAudioProcessor& processor;
 
-  SplineEditor splineEditor;
-  SplineKnotEditor knotEditor;
+  SplineEditor spline;
+  SplineKnotEditor selectedKnot;
 
-  AttachedToggle midSideEditor;
-  Label midSideLabel{ {}, "Mid-Side" };
+  AttachedToggle midSide;
+  AttachedSlider smoothing;
+  Label smoothingLabel{ {}, "Smoothing Time" };
 
   AttachedComboBox oversampling;
   AttachedToggle linearPhase;

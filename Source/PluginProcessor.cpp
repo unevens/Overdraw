@@ -86,6 +86,8 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   midSide = CreateBoolParameter("Mid-Side", false);
 
+  smoothingTime = CreateFloatParameter("Smoothing-Time", 50.0, 0.0, 500.0, 1.f);
+
   oversampling = { static_cast<RangedAudioParameter*>(CreateChoiceParameter(
                      "Oversampling", { "1x", "2x", "4x", "8x", "16x", "32x" })),
                    createWrappedBoolParameter("Linear-Phase-Oversampling",

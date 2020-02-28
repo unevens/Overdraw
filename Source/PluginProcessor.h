@@ -47,6 +47,8 @@ class OverdrawAudioProcessor : public AudioProcessor
     LinkableParameter<AudioParameterFloat> inputGain;
     LinkableParameter<AudioParameterFloat> outputGain;
 
+    AudioParameterFloat* smoothingTime;
+
     WaveShaperParameters waveShaper;
 
     OversamplingParameters oversampling;

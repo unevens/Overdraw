@@ -106,7 +106,10 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     }
   }
 
-  double const automationAlpha = exp(-frequencyCoef / (0.001 * automationTime));
+  float const smoothingTime = 0.001 * parameters.smoothingTime->get();
+
+  double const automationAlpha =
+    smoothingTime == 0.f ? 0.f : exp(-frequencyCoef / smoothingTime);
 
   // mid side
 
