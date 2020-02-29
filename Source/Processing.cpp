@@ -210,6 +210,12 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     wetBuffer[i] = wet;
   }
 
+  hp_in_mem.store_a(highPass->inputMemory);
+  hp_out_mem.store_a(highPass->outputMemory);
+  
+  wet_amount.store(dryWet);
+  out_gain.store(outputGain);
+
   downsampled.deinterleave(ioAudio, 2, numSamples);
 
   if (isMidSideEnabled) {
