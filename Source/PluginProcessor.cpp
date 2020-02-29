@@ -97,14 +97,11 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   outputGain = CreateLinkableFloatParameters("Output-Gain", 0.f, -48.f, +48.f);
 
-  waveShaper.symmetry = CreateLinkableBoolParameters("Symmetry", true);
+  symmetry = CreateLinkableBoolParameters("Symmetry", true);
 
-  waveShaper.dc = CreateLinkableFloatParameters("DC", 0.f, -1.f, 1.f, 0.001f);
+  dryWet = CreateLinkableFloatParameters("Dry-Wet", 100.f, 0.f, 100.f, 1.0f);
 
-  waveShaper.dryWet =
-    CreateLinkableFloatParameters("Dry-Wet", 100.f, 0.f, 100.f, 1.0f);
-
-  waveShaper.dcCutoff =
+  highPassCutoff =
     CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
 
   auto const isKnotActive = [&](int knotIndex) {
@@ -140,12 +137,14 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , parameters(*this)
 
-  , splines(avec::SplineHolder<avec::WaveShaper, Vec2d>::make<maxNumKnots>())
+  , splines(avec::SplineHolder<avec::Spline, Vec2d>::make<maxNumKnots>())
+
+  , highPass(avec::Aligned<avec::SimpleHighPass<Vec2d>>::make())
 
   , asyncOversampling([this] {
     auto oversampling = OversamplingSettings{};
-    oversampling.numScalarToVecUpsamplers = 2;
-    oversampling.numVecToScalarDownsamplers = 1;
+    oversampling.numVecToVecUpsamplers = 1;
+    oversampling.numVecToVecDownsamplers = 1;
     oversampling.numChannels = 2;
     oversampling.updateLatency = [this](int latency) {
       setLatencySamples(latency);
@@ -189,6 +188,7 @@ void
 OverdrawAudioProcessor::reset()
 {
   splines.reset();
+  highPass.reset();
 
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;

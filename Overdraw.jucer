@@ -66,6 +66,8 @@
       </GROUP>
       <GROUP id="{6AD72D82-253F-6771-1CD7-80CD51492194}" name="avec">
         <GROUP id="{B2F4726F-AC34-1A27-6B46-1B0E6A7828F2}" name="dsp">
+          <FILE id="iECsnr" name="SimpleHighPass.hpp" compile="0" resource="0"
+                file="oversimple/avec/avec/dsp/SimpleHighPass.hpp"/>
           <FILE id="qOrkH0" name="Spline.hpp" compile="0" resource="0" file="oversimple/avec/avec/dsp/Spline.hpp"/>
           <FILE id="ysveHo" name="SplineMacro.hpp" compile="0" resource="0" file="oversimple/avec/avec/dsp/SplineMacro.hpp"/>
         </GROUP>

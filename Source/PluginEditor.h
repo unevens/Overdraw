@@ -47,7 +47,6 @@ private:
   Label oversamplingLabel{ {}, "Oversampling" };
 
   LinkableControl<AttachedSlider> dryWet;
-  LinkableControl<AttachedSlider> dc;
   LinkableControl<AttachedSlider> highPass;
   LinkableControl<AttachedSlider> inputGain;
   LinkableControl<AttachedSlider> outputGain;

@@ -24,9 +24,9 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
 #include "avec/dsp/Spline.hpp"
+#include "avec/dsp/SimpleHighPass.hpp"
 #include "oversimple/AsyncOversampling.hpp"
 #include <JuceHeader.h>
-
 
 #ifndef OVERDRAW_UI_SCALE
 #define OVERDRAW_UI_SCALE 0.8f
@@ -49,7 +49,10 @@ class OverdrawAudioProcessor : public AudioProcessor
 
     AudioParameterFloat* smoothingTime;
 
-    WaveShaperParameters waveShaper;
+    LinkableParameter<AudioParameterFloat> dryWet;
+    LinkableParameter<WrappedBoolParameter> symmetry;
+
+    LinkableParameter<AudioParameterFloat> highPassCutoff;
 
     OversamplingParameters oversampling;
 
@@ -66,12 +69,18 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   // splines
 
-  avec::SplineHolder<avec::WaveShaper, Vec2d> splines;
+  avec::SplineHolder<avec::Spline, Vec2d> splines;
+
+  aligned_ptr<avec::SimpleHighPass<Vec2d>> highPass;
 
   double automationTime = 50.0;
 
   double inputGain[2] = { 1.0, 1.0 };
   double outputGain[2] = { 1.0, 1.0 };
+  double dryWet[2] = { 1.0, 1.0 };
+
+  InterleavedBuffer<double> interleavedInput{ 2 };
+
 
   // buffer for single precision processing call
   AudioBuffer<double> floatToDouble;

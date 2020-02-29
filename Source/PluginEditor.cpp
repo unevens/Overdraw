@@ -29,7 +29,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   , spline(*p.getOverdrawParameters().spline,
            *p.getOverdrawParameters().apvts,
-           &p.getOverdrawParameters().waveShaper)
+           &p.getOverdrawParameters().symmetry)
 
   , selectedKnot(*p.getOverdrawParameters().spline,
                  *p.getOverdrawParameters().apvts)
@@ -46,19 +46,15 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   , symmetry(*p.getOverdrawParameters().apvts,
              "Symmetric",
-             p.getOverdrawParameters().waveShaper.symmetry)
-
-  , dc(*p.getOverdrawParameters().apvts,
-       "DC",
-       p.getOverdrawParameters().waveShaper.dc)
+             p.getOverdrawParameters().symmetry)
 
   , dryWet(*p.getOverdrawParameters().apvts,
            "Wet",
-           p.getOverdrawParameters().waveShaper.dryWet)
+           p.getOverdrawParameters().dryWet)
 
   , highPass(*p.getOverdrawParameters().apvts,
              "HP Frequency",
-             p.getOverdrawParameters().waveShaper.dcCutoff)
+             p.getOverdrawParameters().highPassCutoff)
 
   , channelLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
@@ -87,7 +83,6 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(outputGain);
   addAndMakeVisible(oversamplingLabel);
   addAndMakeVisible(smoothingLabel);
-  addAndMakeVisible(dc);
   addAndMakeVisible(dryWet);
   addAndMakeVisible(highPass);
   addAndMakeVisible(symmetry);
@@ -124,7 +119,6 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   applyTableSettings(outputGainLabels);
   applyTableSettings(channelLabels);
 
-  applyTableSettings(dc);
   applyTableSettings(dryWet);
   applyTableSettings(symmetry);
   applyTableSettings(highPass);
@@ -219,7 +213,6 @@ OverdrawAudioProcessorEditor::resized()
 
   resize(dryWet, 140._p);
   resize(symmetry, 140._p);
-  resize(dc, 140._p);
   resize(highPass, 140._p);
 
   left += 10._p;
