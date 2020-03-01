@@ -105,7 +105,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
     CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
 
   auto const isKnotActive = [&](int knotIndex) {
-    std::array<int, 4> enabledKnotIndices = { 7, 9, 11 };
+    std::array<int, 3> enabledKnotIndices = { 7, 9, 11 };
     return enabledKnotIndices.end() != std::find(enabledKnotIndices.begin(),
                                                  enabledKnotIndices.end(),
                                                  knotIndex);
@@ -137,7 +137,7 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , parameters(*this)
 
-  , splines(avec::SplineHolder<avec::Spline, Vec2d>::make<maxNumKnots>())
+  , splines(avec::SplineHolder<Vec2d>::make<maxNumKnots>(true))
 
   , highPass(avec::Aligned<avec::SimpleHighPass<Vec2d>>::make())
 
@@ -187,8 +187,9 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 void
 OverdrawAudioProcessor::reset()
 {
-  splines.reset();
-  highPass.reset();
+  parameters.spline->updateSpline(splines);
+
+  highPass->reset();
 
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;

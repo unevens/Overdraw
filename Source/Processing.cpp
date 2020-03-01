@@ -18,6 +18,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "PluginProcessor.h"
+#include "avec/dsp/SimpleHighPassMacro.hpp"
 #include "avec/dsp/SplineMacro.hpp"
 
 static void
@@ -79,11 +80,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   bool const isMidSideEnabled = parameters.midSide->get();
 
-  auto spline = parameters.spline->updateSpline(splines);
-
-  if (spline && parameters.spline->needsReset()) {
-    spline->reset();
-  }
+  auto [spline, splineAutomator] = parameters.spline->updateSpline(splines);
 
   double inputGainTarget[2];
   double outputGainTarget[2];
@@ -99,13 +96,16 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     }
   }
 
-  float const smoothingTime = 0.001 * parameters.smoothingTime->get();
+  double const smoothingTime = 0.001 * parameters.smoothingTime->get();
 
   double const frequencyCoef = MathConstants<double>::twoPi / getSampleRate();
 
   double const automationAlpha =
-    smoothingTime == 0.f
-      ? 0.f
+    smoothingTime == 0.0 ? 0.0 : exp(-frequencyCoef / smoothingTime);
+
+  double const upsampledAutomationAlpha =
+    smoothingTime == 0.0
+      ? 0.0
       : exp(-frequencyCoef / (smoothingTime * oversampling.getRate()));
 
   // mid side
@@ -136,7 +136,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     return;
   }
 
-  spline->setSmoothingFrequency(automationAlpha);
+  splineAutomator->setSmoothingAlpha(upsampledAutomationAlpha);
 
   // oversampling
 
@@ -160,7 +160,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // processing
 
-  spline->processBlock(upsampled_io, upsampled_io);
+  spline->processBlock(upsampled_io, upsampled_io, splineAutomator);
 
   // downsample
 
@@ -174,8 +174,8 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   Vec2d out_gain = Vec2d().load(outputGain);
   Vec2d out_gain_target = Vec2d().load(outputGainTarget);
 
-  double wetTarget[2] = { parameters.dryWet.get(0)->get(),
-                          parameters.dryWet.get(1)->get() };
+  double wetTarget[2] = { 0.01 * parameters.dryWet.get(0)->get(),
+                          0.01 * parameters.dryWet.get(1)->get() };
   Vec2d wet_amount_target = Vec2d().load(wetTarget);
   Vec2d wet_amount = Vec2d().load(dryWet);
 
@@ -185,9 +185,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   highPass->setHighPassFrequency(frequencyCoef * highPassCutoff[0], 0);
   highPass->setHighPassFrequency(frequencyCoef * highPassCutoff[1], 1);
 
-  Vec2d hp_in_mem = Vec2d().load_a(highPass->inputMemory);
-  Vec2d hp_out_mem = Vec2d().load_a(highPass->outputMemory);
-  Vec2d hp_alpha = Vec2d().load_a(highPass->alpha);
+  LOAD_SIMPLE_HIGH_PASS(highPass, Vec2d);
 
   auto& dryBuffer = interleavedInput.getBuffer2(0);
   auto& wetBuffer = downsampled.getBuffer2(0);
@@ -201,18 +199,15 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     out_gain = out_gain_target + alpha * (out_gain - out_gain_target);
     wet *= out_gain;
 
-    hp_out_mem = hp_alpha * (hp_out_mem + wet - hp_in_mem);
-    hp_in_mem = wet;
-    wet = hp_out_mem;
+    APPLY_SIMPLE_HIGH_PASS(highPass, wet, wet);
 
     wet_amount = wet_amount_target + alpha * (wet_amount - wet_amount_target);
     wet = dry + wet_amount * (wet - dry);
     wetBuffer[i] = wet;
   }
 
-  hp_in_mem.store_a(highPass->inputMemory);
-  hp_out_mem.store_a(highPass->outputMemory);
-  
+  STORE_SIMPLE_HIGH_PASS(highPass);
+
   wet_amount.store(dryWet);
   out_gain.store(outputGain);
 

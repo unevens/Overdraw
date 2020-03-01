@@ -69,7 +69,7 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   // splines
 
-  avec::SplineHolder<avec::Spline, Vec2d> splines;
+  avec::SplineHolder<Vec2d> splines;
 
   aligned_ptr<avec::SimpleHighPass<Vec2d>> highPass;
 
