@@ -356,7 +356,7 @@ OverdrawAudioProcessorEditor::onFilterChanged(int filterIndex)
   }
 
   filterType[i] = newFilterType;
-  
+
   setupFilterControls(i);
 }
 
@@ -371,7 +371,8 @@ OverdrawAudioProcessorEditor::setupFilterControls(int filterIndex)
 
   resonance[i] = std::make_unique<LinkableControl<AttachedSlider>>(
     *processor.getOverdrawParameters().apvts,
-    useBandwidth ? "Bandwidth" : "Resonance",
+    String(i == 0 ? "Input " : "Output ") +
+      (useBandwidth ? "Bandwidth" : "Resonance"),
     useBandwidth ? processor.getOverdrawParameters().bandwidth[i]
                  : processor.getOverdrawParameters().resonance[i]);
 
