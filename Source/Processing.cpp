@@ -59,6 +59,44 @@ applyGain(double** io,
 }
 
 void
+OverdrawAudioProcessor::applyFilter(VecBuffer<Vec2d>& io, bool useOutputFilter)
+{
+  int const i = useOutputFilter ? 1 : 0;
+  switch (lastFilter[i]) {
+
+    case FilterType::lowPass6dB:
+      onePole[i]->lowPass(io, io);
+      break;
+
+    case FilterType::highPass6dB:
+      onePole[i]->highPass(io, io);
+      break;
+
+    case FilterType::bandPass12dB:
+      svf[i]->bandPass(io, io);
+      break;
+
+    case FilterType::lowPass12dB:
+      svf[i]->lowPass(io, io);
+      break;
+
+    case FilterType::highPass12dB:
+      svf[i]->highPass(io, io);
+      break;
+
+    case FilterType::normalizedBandPass12dB:
+      svf[i]->normalizedBandPass(io, io);
+      break;
+
+    case FilterType::none:
+      break;
+
+    default:
+      assert(false);
+  }
+}
+
+void
 OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
                                      MidiBuffer& midi)
 {
@@ -138,13 +176,15 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
           onePole[i]->setSmoothingAlpha(automationAlpha);
           break;
 
-        case FilterType::bandPass12dB:
-          svf[i]->setBandPass(parameters.bandwidth[i].get(c)->get(), cutoff, c);
+        case FilterType::normalizedBandPass12dB:
+          svf[i]->setupNormalizedBandPass(
+            parameters.bandwidth[i].get(c)->get(), cutoff, c);
           svf[i]->setSmoothingAlpha(automationAlpha);
           break;
 
         case FilterType::highPass12dB:
         case FilterType::lowPass12dB:
+        case FilterType::bandPass12dB:
           svf[i]->setFrequency(cutoff, c);
           svf[i]->setResonance(parameters.resonance[i].get(c)->get(), c);
           svf[i]->setSmoothingAlpha(automationAlpha);
@@ -174,34 +214,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   interleavedInput.interleave(ioAudio, 2, numSamples);
   auto& in = interleavedInput.getBuffer2(0);
 
-  switch (filter[0]) {
-
-    case FilterType::lowPass6dB:
-      onePole[0]->lowPass(in, in);
-      break;
-
-    case FilterType::highPass6dB:
-      onePole[0]->highPass(in, in);
-      break;
-
-    case FilterType::bandPass12dB:
-      svf[0]->bandPass(in, in);
-      break;
-
-    case FilterType::lowPass12dB:
-      svf[0]->lowPass(in, in);
-      break;
-
-    case FilterType::highPass12dB:
-      svf[0]->highPass(in, in);
-      break;
-
-    case FilterType::none:
-      break;
-
-    default:
-      assert(false);
-  }
+  applyFilter(in, false);
 
   // oversampling
 
@@ -235,34 +248,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   auto& downsampled = oversampling.vecToVecDownsamplers[0]->getOutput();
   auto& out = downsampled.getBuffer2(0);
 
-  switch (filter[1]) {
-
-    case FilterType::lowPass6dB:
-      onePole[1]->lowPass(out, out);
-      break;
-
-    case FilterType::highPass6dB:
-      onePole[1]->highPass(out, out);
-      break;
-
-    case FilterType::bandPass12dB:
-      svf[1]->bandPass(out, out);
-      break;
-
-    case FilterType::lowPass12dB:
-      svf[1]->lowPass(out, out);
-      break;
-
-    case FilterType::highPass12dB:
-      svf[1]->highPass(out, out);
-      break;
-
-    case FilterType::none:
-      break;
-
-    default:
-      assert(false);
-  }
+  applyFilter(out, true);
 
   downsampled.deinterleave(ioAudio, 2, numSamples);
 

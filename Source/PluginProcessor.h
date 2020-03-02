@@ -49,10 +49,23 @@ public:
     none = 0,
     lowPass6dB,
     highPass6dB,
-    bandPass12dB,
     lowPass12dB,
     highPass12dB,
+    bandPass12dB,
+    normalizedBandPass12dB,
   };
+
+  static inline const StringArray filterNames = {
+    "None",
+    "LP 6dB/Oct",
+    "HP 6dB/Oct",
+    "LP 12dB/Oct",
+    "HP 12dB/Oct",
+    "BP 12dB/Oct",
+    "NBP 12dB/Oct",
+  };
+
+  static constexpr int numFilterTypes = 6;
 
 private:
   struct Parameters
@@ -107,6 +120,8 @@ private:
   oversimple::AsyncOversampling asyncOversampling;
   oversimple::OversamplingGetter<double>& oversamplingGetter;
   oversimple::AsyncOversampling::Awaiter oversamplingAwaiter;
+
+  void applyFilter(VecBuffer<Vec2d>& io, bool useOutputFilter);
 
 public:
   static constexpr int maxNumKnots = 15;

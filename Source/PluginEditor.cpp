@@ -81,25 +81,11 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   , filter{ { { *this,
                 *p.getOverdrawParameters().apvts,
                 "Input-Filter",
-                {
-                  "None",
-                  "Low Pass 6dB",
-                  "High Pass 6dB",
-                  "Band Pass 12dB",
-                  "Low Pass 12dB",
-                  "High Pass 12dB",
-                } },
+                OverdrawAudioProcessor::filterNames },
               { *this,
                 *p.getOverdrawParameters().apvts,
                 "Output-Filter",
-                {
-                  "None",
-                  "Low Pass 6dB",
-                  "High Pass 6dB",
-                  "Band Pass 12dB",
-                  "Low Pass 12dB",
-                  "High Pass 12dB",
-                } } } }
+                OverdrawAudioProcessor::filterNames } } }
 
   , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
 
@@ -167,7 +153,8 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
       *p.getOverdrawParameters().apvts,
       i == 0 ? "Input-Filter" : "Output-Filter",
       [this, i] { onFilterChanged(i); },
-      NormalisableRange<float>(0.f, 5.f, 1.f));
+      NormalisableRange<float>(
+        0.f, OverdrawAudioProcessor::numFilterTypes, 1.f));
 
     filterType[i] =
       static_cast<FilterType>((int)(filterAttachment[i]->getValue()));
@@ -367,7 +354,7 @@ OverdrawAudioProcessorEditor::setupFilterControls(int filterIndex)
 
   removeChildComponent(resonance[i].get());
 
-  bool const useBandwidth = filterType[i] == FilterType::bandPass12dB;
+  bool const useBandwidth = filterType[i] == FilterType::normalizedBandPass12dB;
 
   resonance[i] = std::make_unique<LinkableControl<AttachedSlider>>(
     *processor.getOverdrawParameters().apvts,
@@ -386,6 +373,7 @@ OverdrawAudioProcessorEditor::setupFilterControls(int filterIndex)
   resonance[i]->tableSettings.backgroundColour = backgroundColour;
 
   bool const resonanceEnabled = useBandwidth ||
+                                filterType[i] == FilterType::bandPass12dB ||
                                 filterType[i] == FilterType::lowPass12dB ||
                                 filterType[i] == FilterType::highPass12dB;
 

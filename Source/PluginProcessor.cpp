@@ -98,15 +98,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
   for (int i = 0; i < 2; ++i) {
     String prefix = i == 0 ? "Input-" : "Output-";
 
-    filter[i] = createChoiceParameter(prefix + "Filter",
-                                      {
-                                        "None",
-                                        "LowPass6dB",
-                                        "HighPass6dB",
-                                        "BandPass12dB",
-                                        "LowPass12dB",
-                                        "HighPass12dB",
-                                      });
+    filter[i] = createChoiceParameter(prefix + "Filter", filterNames);
 
     gain[i] = createLinkableFloatParameters(prefix + "Gain", 0.f, -48.f, +48.f);
 
@@ -229,8 +221,8 @@ OverdrawAudioProcessor::reset()
 
       onePole[i]->setFrequency(cutoff, c);
 
-      if (filter == FilterType::bandPass12dB) {
-        svf[i]->setBandPass(parameters.bandwidth[i].get(c)->get(), cutoff, c);
+      if (filter == FilterType::normalizedBandPass12dB) {
+        svf[i]->setupNormalizedBandPass(parameters.bandwidth[i].get(c)->get(), cutoff, c);
       }
       else {
         svf[i]->setFrequency(cutoff, c);
