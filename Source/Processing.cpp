@@ -210,8 +210,11 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   auto& upsampledBuffer = oversampling.vecToVecUpsamplers[0]->getOutput();
   auto& upsampledIo = upsampledBuffer.getBuffer2(0);
 
-  // processing
-  spline->processBlock(upsampledIo, upsampledIo, splineAutomator);
+  // waveshaping
+  
+  if (spline) {
+    spline->processBlock(upsampledIo, upsampledIo, splineAutomator);
+  }
 
   // downsample
 
