@@ -82,31 +82,71 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   auto [spline, splineAutomator] = parameters.spline->updateSpline(splines);
 
-  double inputGainTarget[2];
-  double outputGainTarget[2];
-
-  for (int c = 0; c < 2; ++c) {
-
-    outputGainTarget[c] = exp(db_to_lin * parameters.outputGain.get(c)->get());
-    inputGainTarget[c] = exp(db_to_lin * parameters.inputGain.get(c)->get());
-
-    if (spline) {
-      spline->setIsSymmetric(parameters.symmetry.get(c)->getValue() ? 1.0 : 0.0,
-                             c);
-    }
-  }
-
   double const smoothingTime = 0.001 * parameters.smoothingTime->get();
 
   double const frequencyCoef = MathConstants<double>::twoPi / getSampleRate();
+  double const upsampledFrequencyCoef = frequencyCoef / oversampling.getRate();
 
   double const automationAlpha =
     smoothingTime == 0.0 ? 0.0 : exp(-frequencyCoef / smoothingTime);
 
   double const upsampledAutomationAlpha =
-    smoothingTime == 0.0
-      ? 0.0
-      : exp(-frequencyCoef / (smoothingTime * oversampling.getRate()));
+    smoothingTime == 0.0 ? 0.0 : exp(-upsampledFrequencyCoef / smoothingTime);
+
+  if (splineAutomator) {
+    splineAutomator->setSmoothingAlpha(upsampledAutomationAlpha);
+  }
+
+  double gainTarget[2][2];
+
+  FilterType const filter[2] = {
+    static_cast<FilterType>(parameters.filter[0]->getIndex()),
+    static_cast<FilterType>(parameters.filter[1]->getIndex())
+  };
+
+  for (int c = 0; c < 2; ++c) {
+
+    for (int i = 0; i < 2; ++i) {
+      gainTarget[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
+    }
+
+    if (spline) {
+      spline->setIsSymmetric(parameters.symmetry.get(c)->getValue() ? 1.0 : 0.0,
+                             c);
+    }
+
+    for (int i = 0; i < 2; ++i) {
+
+      auto const cutoff = frequencyCoef * parameters.cutoff[i].get(c)->get();
+
+      switch (filter[i]) {
+
+        case FilterType::lowPass6dB:
+        case FilterType::highPass6dB:
+          onePole[i]->setFrequency(cutoff, c);
+          onePole[i]->setSmoothingAlpha(automationAlpha);
+          break;
+
+        case FilterType::bandPass12dB:
+          svf[i]->setBandPass(parameters.bandwidth[i].get(c)->get(), cutoff, c);
+          svf[i]->setSmoothingAlpha(automationAlpha);
+          break;
+
+        case FilterType::highPass12dB:
+        case FilterType::lowPass12dB:
+          svf[i]->setFrequency(cutoff, c);
+          svf[i]->setResonance(parameters.resonance[i].get(c)->get(), c);
+          svf[i]->setSmoothingAlpha(automationAlpha);
+          break;
+
+        case FilterType::none:
+          break;
+
+        default:
+          assert(false);
+      }
+    }
+  }
 
   // mid side
 
@@ -116,33 +156,45 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // input gain
 
-  applyGain(ioAudio, inputGainTarget, inputGain, automationAlpha, numSamples);
+  applyGain(ioAudio, gainTarget[0], gain[0], automationAlpha, numSamples);
 
-  // early return if no knots are active
+  // input filter
 
-  if (!spline) {
+  interleavedInput.interleave(ioAudio, 2, numSamples);
+  auto& in = interleavedInput.getBuffer2(0);
 
-    // mid side
+  switch (filter[0]) {
 
-    if (isMidSideEnabled) {
-      midSideToLeftRight(ioAudio, numSamples);
-    }
+    case FilterType::lowPass6dB:
+      onePole[0]->lowPass(in, in);
+      break;
 
-    // input gain
+    case FilterType::highPass6dB:
+      onePole[0]->highPass(in, in);
+      break;
 
-    applyGain(
-      ioAudio, outputGainTarget, outputGain, automationAlpha, numSamples);
+    case FilterType::bandPass12dB:
+      svf[0]->bandPass(in, in);
+      break;
 
-    return;
+    case FilterType::lowPass12dB:
+      svf[0]->lowPass(in, in);
+      break;
+
+    case FilterType::highPass12dB:
+      svf[0]->highPass(in, in);
+      break;
+
+    case FilterType::none:
+      break;
+
+    default:
+      assert(false);
   }
-
-  splineAutomator->setSmoothingAlpha(upsampledAutomationAlpha);
 
   // oversampling
 
   oversampling.prepareBuffers(numSamples); // extra safety measure
-
-  interleavedInput.interleave(ioAudio, 2, numSamples);
 
   int const numUpsampledSamples =
     oversampling.vecToVecUpsamplers[0]->processBlock(
@@ -156,11 +208,10 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   }
 
   auto& upsampledBuffer = oversampling.vecToVecUpsamplers[0]->getOutput();
-  auto& upsampled_io = upsampledBuffer.getBuffer2(0);
+  auto& upsampledIo = upsampledBuffer.getBuffer2(0);
 
   // processing
-
-  spline->processBlock(upsampled_io, upsampled_io, splineAutomator);
+  spline->processBlock(upsampledIo, upsampledIo, splineAutomator);
 
   // downsample
 
@@ -168,50 +219,40 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     upsampledBuffer, 2, numSamples);
 
   auto& downsampled = oversampling.vecToVecDownsamplers[0]->getOutput();
+  auto& out = downsampled.getBuffer2(0);
 
-  // output gain, dry/wet and high pass
+  switch (filter[1]) {
 
-  Vec2d out_gain = Vec2d().load(outputGain);
-  Vec2d out_gain_target = Vec2d().load(outputGainTarget);
+    case FilterType::lowPass6dB:
+      onePole[1]->lowPass(out, out);
+      break;
 
-  double wetTarget[2] = { 0.01 * parameters.dryWet.get(0)->get(),
-                          0.01 * parameters.dryWet.get(1)->get() };
-  Vec2d wet_amount_target = Vec2d().load(wetTarget);
-  Vec2d wet_amount = Vec2d().load(dryWet);
+    case FilterType::highPass6dB:
+      onePole[1]->highPass(out, out);
+      break;
 
-  float highPassCutoff[2] = { parameters.highPassCutoff.get(0)->get(),
-                              parameters.highPassCutoff.get(1)->get() };
+    case FilterType::bandPass12dB:
+      svf[1]->bandPass(out, out);
+      break;
 
-  highPass->setHighPassFrequency(frequencyCoef * highPassCutoff[0], 0);
-  highPass->setHighPassFrequency(frequencyCoef * highPassCutoff[1], 1);
+    case FilterType::lowPass12dB:
+      svf[1]->lowPass(out, out);
+      break;
 
-  LOAD_SIMPLE_HIGH_PASS(highPass, Vec2d);
+    case FilterType::highPass12dB:
+      svf[1]->highPass(out, out);
+      break;
 
-  auto& dryBuffer = interleavedInput.getBuffer2(0);
-  auto& wetBuffer = downsampled.getBuffer2(0);
+    case FilterType::none:
+      break;
 
-  Vec2d alpha = automationAlpha;
-
-  for (int i = 0; i < numSamples; ++i) {
-    Vec2d wet = wetBuffer[i];
-    Vec2d const dry = dryBuffer[i];
-
-    out_gain = out_gain_target + alpha * (out_gain - out_gain_target);
-    wet *= out_gain;
-
-    APPLY_SIMPLE_HIGH_PASS(highPass, wet, wet);
-
-    wet_amount = wet_amount_target + alpha * (wet_amount - wet_amount_target);
-    wet = dry + wet_amount * (wet - dry);
-    wetBuffer[i] = wet;
+    default:
+      assert(false);
   }
 
-  STORE_SIMPLE_HIGH_PASS(highPass);
-
-  wet_amount.store(dryWet);
-  out_gain.store(outputGain);
-
   downsampled.deinterleave(ioAudio, 2, numSamples);
+
+  applyGain(ioAudio, gainTarget[1], gain[1], automationAlpha, numSamples);
 
   if (isMidSideEnabled) {
     midSideToLeftRight(ioAudio, numSamples);

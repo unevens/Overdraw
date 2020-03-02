@@ -86,6 +86,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   midSide = CreateBoolParameter("Mid-Side", false);
 
+
   smoothingTime = CreateFloatParameter("Smoothing-Time", 50.0, 0.0, 500.0, 1.f);
 
   oversampling = { static_cast<RangedAudioParameter*>(CreateChoiceParameter(
@@ -93,16 +94,32 @@ OverdrawAudioProcessor::Parameters::Parameters(
                    createWrappedBoolParameter("Linear-Phase-Oversampling",
                                               false) };
 
-  inputGain = CreateLinkableFloatParameters("Input-Gain", 0.f, -48.f, +48.f);
-
-  outputGain = CreateLinkableFloatParameters("Output-Gain", 0.f, -48.f, +48.f);
-
   symmetry = CreateLinkableBoolParameters("Symmetry", true);
 
-  dryWet = CreateLinkableFloatParameters("Dry-Wet", 100.f, 0.f, 100.f, 1.0f);
+  for (int i = 0; i < 2; ++i) {
+    String prefix = i == 0 ? "Input-" : "Output-";
 
-  highPassCutoff =
-    CreateLinkableFloatParameters("DC-Cutoff-Frequency", 0.f, 0.f, 20.f, 0.1f);
+    filter[i] = CreateChoiceParameter(prefix + "Filter",
+                                      {
+                                        "None",
+                                        "LowPass6dB",
+                                        "HighPass6dB",
+                                        "BandPass12dB",
+                                        "LowPass12dB",
+                                        "HighPass12dB",
+                                      });
+
+    gain[i] = CreateLinkableFloatParameters(prefix + "Gain", 0.f, -48.f, +48.f);
+
+    cutoff[i] = CreateLinkableFloatParameters(
+      prefix + "Cutoff", 1000.f, 20.f, 2000.f, 1.0f);
+
+    resonance[i] = CreateLinkableFloatParameters(
+      prefix + "Resonance", 1.f, 0.1f, 10.f, 0.001f);
+
+    bandwidth[i] = CreateLinkableFloatParameters(
+      prefix + "Bandwidth", 1.f, 0.1f, 10.f, 0.001f);
+  }
 
   auto const isKnotActive = [&](int knotIndex) {
     std::array<int, 3> enabledKnotIndices = { 7, 9, 11 };
@@ -139,7 +156,11 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , splines(avec::SplineHolder<Vec2d>::make<maxNumKnots>(true))
 
-  , highPass(avec::Aligned<avec::SimpleHighPass<Vec2d>>::make())
+  , onePole{ { avec::Aligned<avec::OnePole<Vec2d>>::make(),
+               avec::Aligned<avec::OnePole<Vec2d>>::make() } }
+
+  , svf{ { avec::Aligned<avec::StateVariable<Vec2d>>::make(),
+           avec::Aligned<avec::StateVariable<Vec2d>>::make() } }
 
   , asyncOversampling([this] {
     auto oversampling = OversamplingSettings{};
@@ -179,6 +200,8 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
   floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
 
+  interleavedInput.setNumSamples(samplesPerBlock);
+
   reset();
 
   oversamplingAwaiter.await();
@@ -188,15 +211,19 @@ void
 OverdrawAudioProcessor::reset()
 {
   parameters.spline->updateSpline(splines);
+  splines.reset();
 
-  highPass->reset();
+  // add automation update for filters
 
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;
 
-  for (int c = 0; c < 2; ++c) {
-    inputGain[c] = exp(db_to_lin * parameters.inputGain.get(c)->get());
-    outputGain[c] = exp(db_to_lin * parameters.outputGain.get(c)->get());
+  for (int i = 0; i < 2; ++i) {
+    for (int c = 0; c < 2; ++c) {
+      gain[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
+    }
+    onePole[i]->reset();
+    svf[i]->reset();
   }
 }
 

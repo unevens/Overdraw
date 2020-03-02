@@ -23,8 +23,10 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "OversamplingParameters.h"
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
-#include "avec/dsp/Spline.hpp"
+#include "avec/dsp/OnePole.hpp"
 #include "avec/dsp/SimpleHighPass.hpp"
+#include "avec/dsp/Spline.hpp"
+#include "avec/dsp/StateVariable.hpp"
 #include "oversimple/AsyncOversampling.hpp"
 #include <JuceHeader.h>
 
@@ -41,20 +43,33 @@ constexpr static long double operator"" _p(long double px)
 
 class OverdrawAudioProcessor : public AudioProcessor
 {
+public:
+  enum class FilterType
+  {
+    none = 0,
+    lowPass6dB,
+    highPass6dB,
+    bandPass12dB,
+    lowPass12dB,
+    highPass12dB,
+  };
+
+private:
   struct Parameters
   {
     AudioParameterBool* midSide;
-    LinkableParameter<AudioParameterFloat> inputGain;
-    LinkableParameter<AudioParameterFloat> outputGain;
 
     AudioParameterFloat* smoothingTime;
 
-    LinkableParameter<AudioParameterFloat> dryWet;
+    OversamplingParameters oversampling;
+
     LinkableParameter<WrappedBoolParameter> symmetry;
 
-    LinkableParameter<AudioParameterFloat> highPassCutoff;
-
-    OversamplingParameters oversampling;
+    std::array<AudioParameterChoice*, 2> filter;
+    std::array<LinkableParameter<AudioParameterFloat>, 2> cutoff;
+    std::array<LinkableParameter<AudioParameterFloat>, 2> resonance;
+    std::array<LinkableParameter<AudioParameterFloat>, 2> bandwidth;
+    std::array<LinkableParameter<AudioParameterFloat>, 2> gain;
 
     std::unique_ptr<SplineParameters> spline;
 
@@ -71,16 +86,14 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   avec::SplineHolder<Vec2d> splines;
 
-  aligned_ptr<avec::SimpleHighPass<Vec2d>> highPass;
+  std::array<aligned_ptr<avec::OnePole<Vec2d>>, 2> onePole;
+  std::array<aligned_ptr<avec::StateVariable<Vec2d>>, 2> svf;
 
   double automationTime = 50.0;
 
-  double inputGain[2] = { 1.0, 1.0 };
-  double outputGain[2] = { 1.0, 1.0 };
-  double dryWet[2] = { 1.0, 1.0 };
+  double gain[2][2] = { { 1.0, 1.0 }, { 1.0, 1.0 } };
 
   InterleavedBuffer<double> interleavedInput{ 2 };
-
 
   // buffer for single precision processing call
   AudioBuffer<double> floatToDouble;
