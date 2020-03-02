@@ -25,7 +25,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
 {
   std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 
-  auto const CreateFloatParameter =
+  auto const createFloatParameter =
     [&](String name, float value, float min, float max, float step = 0.01f) {
       parameters.push_back(std::unique_ptr<RangedAudioParameter>(
         new AudioParameterFloat(name, name, { min, max, step }, value)));
@@ -39,14 +39,14 @@ OverdrawAudioProcessor::Parameters::Parameters(
     return wrapper;
   };
 
-  auto const CreateBoolParameter = [&](String name, float value) {
+  auto const createBoolParameter = [&](String name, float value) {
     parameters.push_back(std::unique_ptr<RangedAudioParameter>(
       new AudioParameterBool(name, name, value)));
 
     return static_cast<AudioParameterBool*>(parameters.back().get());
   };
 
-  auto const CreateChoiceParameter =
+  auto const createChoiceParameter =
     [&](String name, StringArray choices, int defaultIndex = 0) {
       parameters.push_back(std::unique_ptr<RangedAudioParameter>(
         new AudioParameterChoice(name, name, choices, defaultIndex)));
@@ -58,16 +58,16 @@ OverdrawAudioProcessor::Parameters::Parameters(
   String const ch1Suffix = "_ch1";
   String const linkSuffix = "_is_linked";
 
-  auto const CreateLinkableFloatParameters =
+  auto const createLinkableFloatParameters =
     [&](String name, float value, float min, float max, float step = 0.01f) {
       return LinkableParameter<AudioParameterFloat>{
         createWrappedBoolParameter(name + linkSuffix, true),
-        { CreateFloatParameter(name + ch0Suffix, value, min, max, step),
-          CreateFloatParameter(name + ch1Suffix, value, min, max, step) }
+        { createFloatParameter(name + ch0Suffix, value, min, max, step),
+          createFloatParameter(name + ch1Suffix, value, min, max, step) }
       };
     };
 
-  auto const CreateLinkableBoolParameters = [&](String name, bool value) {
+  auto const createLinkableBoolParameters = [&](String name, bool value) {
     return LinkableParameter<WrappedBoolParameter>{
       createWrappedBoolParameter(name + linkSuffix, true),
       { createWrappedBoolParameter(name + ch0Suffix, value),
@@ -75,31 +75,30 @@ OverdrawAudioProcessor::Parameters::Parameters(
     };
   };
 
-  auto const CreateLinkableChoiceParameters =
+  auto const createLinkableChoiceParameters =
     [&](String name, StringArray choices, int defaultIndex = 0) {
       return LinkableParameter<AudioParameterChoice>{
         createWrappedBoolParameter(name + linkSuffix, true),
-        { CreateChoiceParameter(name + ch0Suffix, choices, defaultIndex),
-          CreateChoiceParameter(name + ch1Suffix, choices, defaultIndex) }
+        { createChoiceParameter(name + ch0Suffix, choices, defaultIndex),
+          createChoiceParameter(name + ch1Suffix, choices, defaultIndex) }
       };
     };
 
-  midSide = CreateBoolParameter("Mid-Side", false);
+  midSide = createBoolParameter("Mid-Side", false);
 
+  smoothingTime = createFloatParameter("Smoothing-Time", 50.0, 0.0, 500.0, 1.f);
 
-  smoothingTime = CreateFloatParameter("Smoothing-Time", 50.0, 0.0, 500.0, 1.f);
-
-  oversampling = { static_cast<RangedAudioParameter*>(CreateChoiceParameter(
+  oversampling = { static_cast<RangedAudioParameter*>(createChoiceParameter(
                      "Oversampling", { "1x", "2x", "4x", "8x", "16x", "32x" })),
                    createWrappedBoolParameter("Linear-Phase-Oversampling",
                                               false) };
 
-  symmetry = CreateLinkableBoolParameters("Symmetry", true);
+  symmetry = createLinkableBoolParameters("Symmetry", true);
 
   for (int i = 0; i < 2; ++i) {
     String prefix = i == 0 ? "Input-" : "Output-";
 
-    filter[i] = CreateChoiceParameter(prefix + "Filter",
+    filter[i] = createChoiceParameter(prefix + "Filter",
                                       {
                                         "None",
                                         "LowPass6dB",
@@ -109,16 +108,16 @@ OverdrawAudioProcessor::Parameters::Parameters(
                                         "HighPass12dB",
                                       });
 
-    gain[i] = CreateLinkableFloatParameters(prefix + "Gain", 0.f, -48.f, +48.f);
+    gain[i] = createLinkableFloatParameters(prefix + "Gain", 0.f, -48.f, +48.f);
 
-    cutoff[i] = CreateLinkableFloatParameters(
-      prefix + "Cutoff", 1000.f, 20.f, 2000.f, 1.0f);
+    cutoff[i] = createLinkableFloatParameters(
+      prefix + "Cutoff", 1000.f, 4.f, 20000.f, 1.0f);
 
-    resonance[i] = CreateLinkableFloatParameters(
-      prefix + "Resonance", 1.f, 0.1f, 10.f, 0.001f);
+    resonance[i] = createLinkableFloatParameters(
+      prefix + "Resonance", 0.f, 0.f, 0.99f, 0.001f);
 
-    bandwidth[i] = CreateLinkableFloatParameters(
-      prefix + "Bandwidth", 1.f, 0.1f, 10.f, 0.001f);
+    bandwidth[i] = createLinkableFloatParameters(
+      prefix + "Bandwidth", 1.f, 0.01f, 5.f, 0.01f);
   }
 
   auto const isKnotActive = [&](int knotIndex) {
@@ -213,14 +212,30 @@ OverdrawAudioProcessor::reset()
   parameters.spline->updateSpline(splines);
   splines.reset();
 
-  // add automation update for filters
-
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;
 
+  double const invSampleRate = 1.0 / getSampleRate();
+
   for (int i = 0; i < 2; ++i) {
+
+    auto const filter =
+      static_cast<FilterType>(parameters.filter[i]->getIndex());
+
     for (int c = 0; c < 2; ++c) {
       gain[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
+
+      auto const cutoff = invSampleRate * parameters.cutoff[i].get(c)->get();
+
+      onePole[i]->setFrequency(cutoff, c);
+
+      if (filter == FilterType::bandPass12dB) {
+        svf[i]->setBandPass(parameters.bandwidth[i].get(c)->get(), cutoff, c);
+      }
+      else {
+        svf[i]->setFrequency(cutoff, c);
+        svf[i]->setResonance(parameters.resonance[i].get(c)->get(), c);
+      }
     }
     onePole[i]->reset();
     svf[i]->reset();

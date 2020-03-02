@@ -89,6 +89,9 @@ private:
   std::array<aligned_ptr<avec::OnePole<Vec2d>>, 2> onePole;
   std::array<aligned_ptr<avec::StateVariable<Vec2d>>, 2> svf;
 
+  std::array<FilterType, 2> lastFilter = { { FilterType::none,
+                                             FilterType::none } };
+
   double automationTime = 50.0;
 
   double gain[2][2] = { { 1.0, 1.0 }, { 1.0, 1.0 } };

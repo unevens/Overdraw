@@ -84,14 +84,19 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   double const smoothingTime = 0.001 * parameters.smoothingTime->get();
 
-  double const frequencyCoef = MathConstants<double>::twoPi / getSampleRate();
-  double const upsampledFrequencyCoef = frequencyCoef / oversampling.getRate();
+  double const invSampleRate = 1.0 / getSampleRate();
 
   double const automationAlpha =
-    smoothingTime == 0.0 ? 0.0 : exp(-frequencyCoef / smoothingTime);
+    smoothingTime == 0.0
+      ? 0.0
+      : exp(-MathConstants<double>::twoPi * invSampleRate / smoothingTime);
+
+  double const upsampledFrequencyCoef = invSampleRate / oversampling.getRate();
 
   double const upsampledAutomationAlpha =
-    smoothingTime == 0.0 ? 0.0 : exp(-upsampledFrequencyCoef / smoothingTime);
+    smoothingTime == 0.0 ? 0.0
+                         : exp(-MathConstants<double>::twoPi *
+                               upsampledFrequencyCoef / smoothingTime);
 
   if (splineAutomator) {
     splineAutomator->setSmoothingAlpha(upsampledAutomationAlpha);
@@ -103,6 +108,12 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     static_cast<FilterType>(parameters.filter[0]->getIndex()),
     static_cast<FilterType>(parameters.filter[1]->getIndex())
   };
+
+  if (lastFilter[0] != filter[0] || lastFilter[1] != filter[1]) {
+    lastFilter[0] = filter[0];
+    lastFilter[1] = filter[1];
+    reset();
+  }
 
   for (int c = 0; c < 2; ++c) {
 
@@ -117,7 +128,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
     for (int i = 0; i < 2; ++i) {
 
-      auto const cutoff = frequencyCoef * parameters.cutoff[i].get(c)->get();
+      auto const cutoff = invSampleRate * parameters.cutoff[i].get(c)->get();
 
       switch (filter[i]) {
 
@@ -211,7 +222,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   auto& upsampledIo = upsampledBuffer.getBuffer2(0);
 
   // waveshaping
-  
+
   if (spline) {
     spline->processBlock(upsampledIo, upsampledIo, splineAutomator);
   }
