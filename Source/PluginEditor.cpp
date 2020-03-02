@@ -41,7 +41,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
               p.getOverdrawParameters().gain[0] },
             { *p.getOverdrawParameters().apvts,
               "Output Gain",
-              p.getOverdrawParameters().gain[0] } } }
+              p.getOverdrawParameters().gain[1] } } }
 
   , cutoff{ { { *p.getOverdrawParameters().apvts,
                 "Input Cutoff",
