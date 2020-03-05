@@ -4,3 +4,6 @@
 [submodule "oversimple"]
 	path = oversimple
 	url = https://github.com/unevens/oversimple
+[submodule "audio-dsp"]
+	path = audio-dsp
+	url = https://github.com/unevens/audio-dsp
