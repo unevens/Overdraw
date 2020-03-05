@@ -59,41 +59,52 @@ applyGain(double** io,
 }
 
 void
-OverdrawAudioProcessor::applyFilter(VecBuffer<Vec2d>& io, bool useOutputFilter)
+OverdrawAudioProcessor::applyFilter(
+  VecBuffer<Vec2d>& io,
+  avec::SplineInterface<Vec2d>* spline,
+  avec::SplineAutomatorInterface<Vec2d>* splineAutomator)
 {
-  int const i = useOutputFilter ? 1 : 0;
-  switch (lastFilter[i]) {
+  int const numIterations = 2;
 
-    case FilterType::lowPass6dB:
-      onePole[i]->lowPass(io, io);
-      break;
+  int const numActiveKnots = spline->getNumKnots();
+  LOAD_SPLINE_STATE(spline, numActiveKnots, Vec2d, maxNumKnots);
+  LOAD_SPLINE_AUTOMATOR(splineAutomator, numActiveKnots, Vec2d, maxNumKnots);
+  LOAD_SPLINE_SYMMETRY(spline, Vec2d);
 
-    case FilterType::highPass6dB:
-      onePole[i]->highPass(io, io);
-      break;
+  filter->processBlock(
+    io,
+    io,
+    numIterations,
+    [&](Vec2d x) {
+      Vec2d out;
+      COMPUTE_SPLINE_WITH_SYMMETRY(spline, numActiveKnots, Vec2d, x, out);
+      return out;
+    },
+    [&](Vec2d x) {
+      Vec2d out;
+      COMPUTE_SPLINE_WITH_SYMMETRY(spline, numActiveKnots, Vec2d, x, out);
+      return select(x != 0.0, out / x, 1.0);
+    },
+    [&](Vec2d x, Vec2d& out, Vec2d& delta) {
+      COMPUTE_SPLINE_WITH_SYMMETRY_WITH_DERIVATIVE(
+        spline, numActiveKnots, Vec2d, x, out, delta);
+    },
+    [&]() {
+      SPILINE_AUTOMATION(spline, splineAutomator, numActiveKnots, Vec2d);
+    });
+  STORE_SPLINE_STATE(spline, numActiveKnots);
 
-    case FilterType::bandPass12dB:
-      svf[i]->bandPass(io, io);
-      break;
-
-    case FilterType::lowPass12dB:
-      svf[i]->lowPass(io, io);
-      break;
-
-    case FilterType::highPass12dB:
-      svf[i]->highPass(io, io);
-      break;
-
-    case FilterType::normalizedBandPass12dB:
-      svf[i]->normalizedBandPass(io, io);
-      break;
-
-    case FilterType::none:
-      break;
-
-    default:
-      assert(false);
-  }
+  // filter->processBlock(
+  //  io,
+  //  io,
+  //  numIterations,
+  //  [&](Vec2d in) { return tanh(in); },
+  //  [&](Vec2d in) { return select(in == 0.0, 1.0, tanh(in) / in); },
+  //  [&](Vec2d in, Vec2d& out, Vec2d& delta) {
+  //    out = tanh(in);
+  //    delta = 1.0 - out * out;
+  //  },
+  //  [&]() {});
 }
 
 void
@@ -129,12 +140,12 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
       ? 0.0
       : exp(-MathConstants<double>::twoPi * invSampleRate / smoothingTime);
 
-  double const upsampledFrequencyCoef = invSampleRate / oversampling.getRate();
+  double const invUpsampledSampleRate = invSampleRate / oversampling.getRate();
 
   double const upsampledAutomationAlpha =
     smoothingTime == 0.0 ? 0.0
                          : exp(-MathConstants<double>::twoPi *
-                               upsampledFrequencyCoef / smoothingTime);
+                               invUpsampledSampleRate / smoothingTime);
 
   if (splineAutomator) {
     splineAutomator->setSmoothingAlpha(upsampledAutomationAlpha);
@@ -142,18 +153,23 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   double gainTarget[2][2];
 
-  FilterType const filter[2] = {
-    static_cast<FilterType>(parameters.filter[0]->getIndex()),
-    static_cast<FilterType>(parameters.filter[1]->getIndex())
+  std::array<FilterType, 2> const filterType = {
+    static_cast<FilterType>(parameters.filter.get(0)->getIndex()),
+    static_cast<FilterType>(parameters.filter.get(1)->getIndex())
   };
 
-  if (lastFilter[0] != filter[0] || lastFilter[1] != filter[1]) {
-    lastFilter[0] = filter[0];
-    lastFilter[1] = filter[1];
+  if (lastFilterType[0] != filterType[0] ||
+      lastFilterType[1] != filterType[1]) {
+    lastFilterType[0] = filterType[0];
+    lastFilterType[1] = filterType[1];
     reset();
   }
 
   for (int c = 0; c < 2; ++c) {
+
+    filter->setOutput(static_cast<avec::StateVariable<Vec2d>::Output>(
+                        static_cast<int>(filterType[c]) - 1),
+                      c);
 
     for (int i = 0; i < 2; ++i) {
       gainTarget[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
@@ -164,39 +180,20 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
                              c);
     }
 
-    for (int i = 0; i < 2; ++i) {
+    auto const frequency =
+      invUpsampledSampleRate * parameters.frequency.get(c)->get();
 
-      auto const cutoff = invSampleRate * parameters.cutoff[i].get(c)->get();
+    if (filterType[c] == FilterType::normalizedBandPass) {
 
-      switch (filter[i]) {
-
-        case FilterType::lowPass6dB:
-        case FilterType::highPass6dB:
-          onePole[i]->setFrequency(cutoff, c);
-          onePole[i]->setSmoothingAlpha(automationAlpha);
-          break;
-
-        case FilterType::normalizedBandPass12dB:
-          svf[i]->setupNormalizedBandPass(
-            parameters.bandwidth[i].get(c)->get(), cutoff, c);
-          svf[i]->setSmoothingAlpha(automationAlpha);
-          break;
-
-        case FilterType::highPass12dB:
-        case FilterType::lowPass12dB:
-        case FilterType::bandPass12dB:
-          svf[i]->setFrequency(cutoff, c);
-          svf[i]->setResonance(parameters.resonance[i].get(c)->get(), c);
-          svf[i]->setSmoothingAlpha(automationAlpha);
-          break;
-
-        case FilterType::none:
-          break;
-
-        default:
-          assert(false);
-      }
+      filter->setupNormalizedBandPass(
+        parameters.bandwidth.get(c)->get(), frequency, c);
     }
+    else {
+      filter->setFrequency(frequency, c);
+      filter->setResonance(parameters.resonance.get(c)->get(), c);
+    }
+
+    filter->setSmoothingAlpha(upsampledAutomationAlpha);
   }
 
   // mid side
@@ -209,20 +206,12 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   applyGain(ioAudio, gainTarget[0], gain[0], automationAlpha, numSamples);
 
-  // input filter
-
-  interleavedInput.interleave(ioAudio, 2, numSamples);
-  auto& in = interleavedInput.getBuffer2(0);
-
-  applyFilter(in, false);
-
   // oversampling
 
   oversampling.prepareBuffers(numSamples); // extra safety measure
 
   int const numUpsampledSamples =
-    oversampling.vecToVecUpsamplers[0]->processBlock(
-      interleavedInput, 2, numSamples);
+    oversampling.scalarToVecUpsamplers[0]->processBlock(ioAudio, 2, numSamples);
 
   if (numUpsampledSamples == 0) {
     for (auto i = 0; i < totalNumOutputChannels; ++i) {
@@ -231,26 +220,45 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     return;
   }
 
-  auto& upsampledBuffer = oversampling.vecToVecUpsamplers[0]->getOutput();
+  auto& upsampledBuffer = oversampling.scalarToVecUpsamplers[0]->getOutput();
   auto& upsampledIo = upsampledBuffer.getBuffer2(0);
 
   // waveshaping
 
-  if (spline) {
+  bool const isStaticWaveShaperNeeded =
+    std::any_of(filterType.begin(), filterType.end(), [](auto& f) {
+      return f == FilterType::waveShaper;
+    });
+
+  bool const isFilterNeeded =
+    std::any_of(filterType.begin(), filterType.end(), [](auto& f) {
+      return f != FilterType::waveShaper;
+    });
+
+  if (isFilterNeeded && isStaticWaveShaperNeeded) {
+    auto& mixingBuffer = oversampling.interleavedBuffers[0].getBuffer2(0);
+
+    spline->processBlock(upsampledIo, mixingBuffer, splineAutomator);
+    applyFilter(upsampledIo, spline, splineAutomator);
+
+    Vec2db isWaveShaper = Vec2db(filterType[0] == FilterType::waveShaper,
+                                 filterType[1] == FilterType::waveShaper);
+
+    for (int i = 0; i < numUpsampledSamples; ++i) {
+      upsampledIo[i] = select(isWaveShaper, mixingBuffer[i], upsampledIo[i]);
+    }
+  }
+  else if (isFilterNeeded) {
+    applyFilter(upsampledIo, spline, splineAutomator);
+  }
+  else { // just the static waveshaping
     spline->processBlock(upsampledIo, upsampledIo, splineAutomator);
   }
 
   // downsample
 
-  oversampling.vecToVecDownsamplers[0]->processBlock(
-    upsampledBuffer, 2, numSamples);
-
-  auto& downsampled = oversampling.vecToVecDownsamplers[0]->getOutput();
-  auto& out = downsampled.getBuffer2(0);
-
-  applyFilter(out, true);
-
-  downsampled.deinterleave(ioAudio, 2, numSamples);
+  oversampling.vecToScalarDownsamplers[0]->processBlock(
+    upsampledBuffer, ioAudio, 2, numSamples);
 
   applyGain(ioAudio, gainTarget[1], gain[1], automationAlpha, numSamples);
 

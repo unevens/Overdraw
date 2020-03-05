@@ -43,21 +43,17 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
               "Output Gain",
               p.getOverdrawParameters().gain[1] } } }
 
-  , cutoff{ { { *p.getOverdrawParameters().apvts,
-                "Input Cutoff",
-                p.getOverdrawParameters().cutoff[0] },
-              { *p.getOverdrawParameters().apvts,
-                "Output Cutoff",
-                p.getOverdrawParameters().cutoff[1] } } }
+  , frequency{ *p.getOverdrawParameters().apvts,
+               "Frequency",
+               p.getOverdrawParameters().frequency }
 
-  , resonance{ { std::make_unique<LinkableControl<AttachedSlider>>(
-                   *p.getOverdrawParameters().apvts,
-                   "Input Resonance",
-                   p.getOverdrawParameters().resonance[0]),
-                 std::make_unique<LinkableControl<AttachedSlider>>(
-                   *p.getOverdrawParameters().apvts,
-                   "Output Resonance",
-                   p.getOverdrawParameters().resonance[1]) } }
+  , resonance(*p.getOverdrawParameters().apvts,
+              "Resonance",
+              p.getOverdrawParameters().resonance)
+
+  , bandwidth(*p.getOverdrawParameters().apvts,
+              "Bandwidth",
+              p.getOverdrawParameters().bandwidth)
 
   , symmetry(*p.getOverdrawParameters().apvts,
              "Symmetry",
@@ -78,14 +74,10 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
                 *p.getOverdrawParameters().apvts,
                 "Linear-Phase-Oversampling")
 
-  , filter{ { { *this,
-                *p.getOverdrawParameters().apvts,
-                "Input-Filter",
-                OverdrawAudioProcessor::filterNames },
-              { *this,
-                *p.getOverdrawParameters().apvts,
-                "Output-Filter",
-                OverdrawAudioProcessor::filterNames } } }
+  , filterTypeControl{ *p.getOverdrawParameters().apvts,
+                       "Filter",
+                       OverdrawAudioProcessor::filterNames,
+                       p.getOverdrawParameters().filter }
 
   , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
 
@@ -98,23 +90,21 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(oversamplingLabel);
   addAndMakeVisible(smoothingLabel);
   addAndMakeVisible(symmetry);
-  addAndMakeVisible(inputFilterLabel);
-  addAndMakeVisible(outputFilterLabel);
+  addAndMakeVisible(filterTypeControl);
   addAndMakeVisible(channelLabels);
   addAndMakeVisible(inputGainLabels);
   addAndMakeVisible(outputGainLabels);
   addAndMakeVisible(url);
+  addAndMakeVisible(frequency);
+  addAndMakeVisible(resonance);
+  addAndMakeVisible(bandwidth);
 
   for (int i = 0; i < 2; ++i) {
     addAndMakeVisible(gain[i]);
-    addAndMakeVisible(cutoff[i]);
-    addAndMakeVisible(*resonance[i]);
   }
 
   attachAndInitializeSplineEditors(spline, selectedKnot, 7);
 
-  inputFilterLabel.setJustificationType(Justification::centred);
-  outputFilterLabel.setJustificationType(Justification::centred);
   oversamplingLabel.setJustificationType(Justification::centred);
   smoothingLabel.setJustificationType(Justification::centred);
 
@@ -138,29 +128,40 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   applyTableSettings(channelLabels);
   applyTableSettings(symmetry);
 
+  applyTableSettings(filterTypeControl);
+  applyTableSettings(frequency);
+  applyTableSettings(resonance);
+  applyTableSettings(bandwidth);
+
   for (int i = 0; i < 2; ++i) {
-
     applyTableSettings(gain[i]);
-    applyTableSettings(cutoff[i]);
-    applyTableSettings(*resonance[i]);
+  }
 
+  for (int c = 0; c < 2; ++c) {
+    frequency.getControl(c).setTextValueSuffix("Hz");
+  }
+
+  for (int i = 0; i < 2; ++i) {
     for (int c = 0; c < 2; ++c) {
       gain[i].getControl(c).setTextValueSuffix("dB");
-      cutoff[i].getControl(c).setTextValueSuffix("Hz");
     }
+  }
 
-    filterAttachment[i] = std::make_unique<FloatAttachment>(
+  for (int c = 0; c < 2; ++c) {
+    filterAttachment[c] = std::make_unique<FloatAttachment>(
       *p.getOverdrawParameters().apvts,
-      i == 0 ? "Input-Filter" : "Output-Filter",
-      [this, i] { onFilterChanged(i); },
+      c == 0 ? "Filter_ch0" : "Filter_ch1",
+      [this] { onFilterChanged(); },
       NormalisableRange<float>(
         0.f, OverdrawAudioProcessor::numFilterTypes, 1.f));
-
-    filterType[i] =
-      static_cast<FilterType>((int)(filterAttachment[i]->getValue()));
-
-    setupFilterControls(i);
   }
+
+  linkFilterAttachment =
+    std::make_unique<BoolAttachment>(*p.getOverdrawParameters().apvts,
+                                     "Filter_is_linked",
+                                     [this] { onFilterChanged(); });
+
+  onFilterChanged();
 
   smoothing.getControl().setTextValueSuffix("ms");
 
@@ -193,16 +194,14 @@ OverdrawAudioProcessorEditor::paint(Graphics& g)
 
   constexpr int left = 625._p;
   constexpr int width = (190._p) - 1;
-  constexpr int height = 405._p;
+  constexpr int height = 240._p;
   constexpr int top = 10._p;
 
   g.fillRect(juce::Rectangle<int>(left, top, width, height));
 
   g.setColour(lineColour);
-  g.drawRect(left, top, width, 85._p, 1);
-  g.drawRect(left, top, width, 165._p, 1);
-  g.drawRect(left, top, width, 205._p, 1);
-  g.drawRect(left, top, width, 285._p, 1);
+  g.drawRect(left, top, width, 45._p, 1);
+  g.drawRect(left, top, width, 125._p, 1);
   g.drawRect(left, top, width, height, 1);
 
   g.drawRect(spline.getBounds().expanded(1, 1), 1);
@@ -224,13 +223,13 @@ OverdrawAudioProcessorEditor::resized()
 
   int const gainLeft = spline.getBounds().getRight() + offset + 1;
 
-  int const inputGainTopAlignment = (415._p) + offset;
+  int const inputGainTopAlignment = splineEditorSide - 320._p;
   int const inputGainBottomAlignment =
     selectedKnot.getBottom() + 1 - offset - 2 * 160._p;
 
   int const inputGainTop =
     inputGainTopAlignment +
-    1.0 * (inputGainBottomAlignment - inputGainTopAlignment);
+    0.0 * (inputGainBottomAlignment - inputGainTopAlignment);
 
   int const outputGainTop = inputGainTop + offset + 160._p;
 
@@ -259,10 +258,11 @@ OverdrawAudioProcessorEditor::resized()
   resize(channelLabels, 50._p);
 
   resize(symmetry, 120._p);
-  for (int i = 0; i < 2; ++i) {
-    resize(cutoff[i], 140._p);
-    resize(*resonance[i], 180._p);
-  }
+  resize(filterTypeControl,
+         getWidth() - 2 * offset - 3 * (140._p) - (120._p) - (50._p) + 4);
+  resize(frequency, 140._p);
+  resize(resonance, 140._p);
+  resize(bandwidth, 140._p);
 
   Grid grid;
   using Track = Grid::TrackInfo;
@@ -271,23 +271,9 @@ OverdrawAudioProcessorEditor::resized()
 
   grid.templateRows = { Track(Grid::Px(40._p)), Track(Grid::Px(40._p)),
                         Track(Grid::Px(40._p)), Track(Grid::Px(40._p)),
-                        Track(Grid::Px(40._p)), Track(Grid::Px(40._p)),
-                        Track(Grid::Px(40._p)), Track(Grid::Px(40._p)),
                         Track(Grid::Px(40._p)), Track(Grid::Px(40._p)) };
 
-  grid.items = { GridItem(inputFilterLabel),
-                 GridItem(filter[0].getControl())
-                   .withWidth(170._p)
-                   .withHeight(30._p)
-                   .withAlignSelf(GridItem::AlignSelf::center)
-                   .withJustifySelf(GridItem::JustifySelf::center),
-                 GridItem(outputFilterLabel),
-                 GridItem(filter[1].getControl())
-                   .withWidth(170._p)
-                   .withHeight(30._p)
-                   .withAlignSelf(GridItem::AlignSelf::center)
-                   .withJustifySelf(GridItem::JustifySelf::center),
-                 GridItem(midSide.getControl())
+  grid.items = { GridItem(midSide.getControl())
                    .withWidth(120._p)
                    .withHeight(30._p)
                    .withAlignSelf(GridItem::AlignSelf::end)
@@ -314,7 +300,7 @@ OverdrawAudioProcessorEditor::resized()
   grid.alignContent = Grid::AlignContent::center;
 
   grid.performLayout(juce::Rectangle<int>(
-    splineEditorSide + 2 * offset, offset, (190._p) - 1, 400._p));
+    splineEditorSide + 2 * offset, offset, (190._p) - 1, 240._p));
 
   url.setTopLeftPosition(10._p, getHeight() - 18._p);
   url.setSize(160._p, 16._p);
@@ -327,69 +313,49 @@ OverdrawAudioProcessorEditor::resized()
 }
 
 void
-OverdrawAudioProcessorEditor::onFilterChanged(int filterIndex)
+OverdrawAudioProcessorEditor::onFilterChanged()
 {
-  int const i = filterIndex;
-
-  if (!filterAttachment[i]) {
+  if (!linkFilterAttachment) {
     return;
   }
 
-  auto const newFilterType =
-    static_cast<FilterType>((int)(filterAttachment[i]->getValue()));
+  for (int i = 0; i < 2; ++i) {
 
-  if (filterType[i] == newFilterType) {
-    return;
+    if (!filterAttachment[i]) {
+      return;
+    }
+
+    bool const isLinked = linkFilterAttachment->getValue();
+
+    filterType[i] = static_cast<FilterType>(
+      (int)(filterAttachment[isLinked ? 0 : i]->getValue()));
   }
 
-  filterType[i] = newFilterType;
-
-  setupFilterControls(i);
+  setupFilterControls();
 }
 
 void
-OverdrawAudioProcessorEditor::setupFilterControls(int filterIndex)
+OverdrawAudioProcessorEditor::setupFilterControls()
 {
-  int const i = filterIndex;
+  for (int i = 0; i < 2; ++i) {
+    bool const useFilter = filterType[i] != FilterType::waveShaper;
 
-  removeChildComponent(resonance[i].get());
+    bool const useBandwidth = filterType[i] == FilterType::normalizedBandPass;
 
-  bool const useBandwidth = filterType[i] == FilterType::normalizedBandPass12dB;
-
-  resonance[i] = std::make_unique<LinkableControl<AttachedSlider>>(
-    *processor.getOverdrawParameters().apvts,
-    String(i == 0 ? "Input " : "Output ") +
-      (useBandwidth ? "Bandwidth" : "Resonance"),
-    useBandwidth ? processor.getOverdrawParameters().bandwidth[i]
-                 : processor.getOverdrawParameters().resonance[i]);
-
-  addAndMakeVisible(*resonance[i]);
-
-  for (int c = 0; c < 2; ++c) {
-    resonance[i]->getControl(c).setTextValueSuffix(useBandwidth ? "oct" : "");
+    resonance.getControl(i).setEnabled(useFilter && !useBandwidth);
+    bandwidth.getControl(i).setEnabled(useFilter && useBandwidth);
+    frequency.getControl(i).setEnabled(useFilter);
   }
 
-  resonance[i]->tableSettings.lineColour = lineColour;
-  resonance[i]->tableSettings.backgroundColour = backgroundColour;
+  auto const enableLabelAndLink = [](auto& c) {
+    bool const isEnabled =
+      c.getControl(0).isEnabled() || c.getControl(1).isEnabled();
+    c.getLabel().setEnabled(isEnabled);
+    c.getLabel().setEnabled(isEnabled);
+    c.getLinked()->setEnabled(isEnabled);
+  };
 
-  bool const resonanceEnabled = useBandwidth ||
-                                filterType[i] == FilterType::bandPass12dB ||
-                                filterType[i] == FilterType::lowPass12dB ||
-                                filterType[i] == FilterType::highPass12dB;
-
-  for (int c = 0; c < 2; ++c) {
-    resonance[i]->getControl(c).setEnabled(resonanceEnabled);
-  }
-  resonance[i]->getLinked()->setEnabled(resonanceEnabled);
-  resonance[i]->getLabel().setEnabled(resonanceEnabled);
-
-  bool const cutoffEnabled = filterType[i] != FilterType::none;
-
-  for (int c = 0; c < 2; ++c) {
-    cutoff[i].getControl(c).setEnabled(cutoffEnabled);
-  }
-  cutoff[i].getLinked()->setEnabled(cutoffEnabled);
-  cutoff[i].getLabel().setEnabled(cutoffEnabled);
-
-  resized();
+  enableLabelAndLink(resonance);
+  enableLabelAndLink(bandwidth);
+  enableLabelAndLink(frequency);
 }

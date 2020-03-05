@@ -95,22 +95,21 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   symmetry = createLinkableBoolParameters("Symmetry", true);
 
+  filter = createLinkableChoiceParameters("Filter", filterNames);
+
   for (int i = 0; i < 2; ++i) {
-    String prefix = i == 0 ? "Input-" : "Output-";
-
-    filter[i] = createChoiceParameter(prefix + "Filter", filterNames);
-
-    gain[i] = createLinkableFloatParameters(prefix + "Gain", 0.f, -48.f, +48.f);
-
-    cutoff[i] = createLinkableFloatParameters(
-      prefix + "Cutoff", 1000.f, 4.f, 20000.f, 1.0f);
-
-    resonance[i] = createLinkableFloatParameters(
-      prefix + "Resonance", 0.f, 0.f, 0.99f, 0.001f);
-
-    bandwidth[i] = createLinkableFloatParameters(
-      prefix + "Bandwidth", 1.f, 0.01f, 5.f, 0.01f);
+    gain[i] = createLinkableFloatParameters(
+      i == 0 ? "Input-Gain" : "Output-Gain", 0.f, -48.f, +48.f);
   }
+
+  frequency =
+    createLinkableFloatParameters("Cutoff", 1000.f, 4.f, 20000.f, 1.0f);
+
+  resonance =
+    createLinkableFloatParameters("Resonance", 0.f, 0.f, 10.0f, 0.001f);
+
+  bandwidth =
+    createLinkableFloatParameters("Bandwidth", 1.f, 0.01f, 5.f, 0.01f);
 
   auto const isKnotActive = [&](int knotIndex) {
     std::array<int, 3> enabledKnotIndices = { 7, 9, 11 };
@@ -147,17 +146,14 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , splines(avec::SplineHolder<Vec2d>::make<maxNumKnots>(true))
 
-  , onePole{ { avec::Aligned<avec::OnePole<Vec2d>>::make(),
-               avec::Aligned<avec::OnePole<Vec2d>>::make() } }
-
-  , svf{ { avec::Aligned<avec::StateVariable<Vec2d>>::make(),
-           avec::Aligned<avec::StateVariable<Vec2d>>::make() } }
+  , filter(avec::Aligned<avec::StateVariable<Vec2d>>::make())
 
   , asyncOversampling([this] {
     auto oversampling = OversamplingSettings{};
-    oversampling.numVecToVecUpsamplers = 1;
-    oversampling.numVecToVecDownsamplers = 1;
+    oversampling.numScalarToVecUpsamplers = 1;
+    oversampling.numVecToScalarDownsamplers = 1;
     oversampling.numChannels = 2;
+    oversampling.numInterleavedBuffers = 1;
     oversampling.updateLatency = [this](int latency) {
       setLatencySamples(latency);
     };
@@ -191,8 +187,6 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
   floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
 
-  interleavedInput.setNumSamples(samplesPerBlock);
-
   reset();
 
   oversamplingAwaiter.await();
@@ -209,29 +203,27 @@ OverdrawAudioProcessor::reset()
 
   double const invSampleRate = 1.0 / getSampleRate();
 
-  for (int i = 0; i < 2; ++i) {
+  for (int c = 0; c < 2; ++c) {
 
-    auto const filter =
-      static_cast<FilterType>(parameters.filter[i]->getIndex());
+    auto const filterType =
+      static_cast<FilterType>(parameters.filter.get(c)->getIndex());
 
-    for (int c = 0; c < 2; ++c) {
-      gain[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
+    auto const frequency = invSampleRate * parameters.frequency.get(c)->get();
 
-      auto const cutoff = invSampleRate * parameters.cutoff[i].get(c)->get();
-
-      onePole[i]->setFrequency(cutoff, c);
-
-      if (filter == FilterType::normalizedBandPass12dB) {
-        svf[i]->setupNormalizedBandPass(parameters.bandwidth[i].get(c)->get(), cutoff, c);
-      }
-      else {
-        svf[i]->setFrequency(cutoff, c);
-        svf[i]->setResonance(parameters.resonance[i].get(c)->get(), c);
-      }
+    if (filterType == FilterType::normalizedBandPass) {
+      filter->setupNormalizedBandPass(
+        parameters.bandwidth.get(c)->get(), frequency, c);
     }
-    onePole[i]->reset();
-    svf[i]->reset();
+    else {
+      filter->setFrequency(frequency, c);
+      filter->setResonance(parameters.resonance.get(c)->get(), c);
+    }
+
+    for (int i = 0; i < 2; ++i) {
+      gain[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
+    }
   }
+  filter->reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations

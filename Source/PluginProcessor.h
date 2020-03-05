@@ -46,26 +46,18 @@ class OverdrawAudioProcessor : public AudioProcessor
 public:
   enum class FilterType
   {
-    none = 0,
-    lowPass6dB,
-    highPass6dB,
-    lowPass12dB,
-    highPass12dB,
-    bandPass12dB,
-    normalizedBandPass12dB,
+    waveShaper = 0,
+    lowPass,
+    highPass,
+    bandPass,
+    normalizedBandPass,
   };
 
   static inline const StringArray filterNames = {
-    "None",
-    "LP 6dB/Oct",
-    "HP 6dB/Oct",
-    "LP 12dB/Oct",
-    "HP 12dB/Oct",
-    "BP 12dB/Oct",
-    "NBP 12dB/Oct",
+    "WaveShaper", "Low Pass", "High Pass", "Band Pass", "Band Pass Unit Gain",
   };
 
-  static constexpr int numFilterTypes = 6;
+  static constexpr int numFilterTypes = 5;
 
 private:
   struct Parameters
@@ -78,10 +70,10 @@ private:
 
     LinkableParameter<WrappedBoolParameter> symmetry;
 
-    std::array<AudioParameterChoice*, 2> filter;
-    std::array<LinkableParameter<AudioParameterFloat>, 2> cutoff;
-    std::array<LinkableParameter<AudioParameterFloat>, 2> resonance;
-    std::array<LinkableParameter<AudioParameterFloat>, 2> bandwidth;
+    LinkableParameter<AudioParameterChoice> filter;
+    LinkableParameter<AudioParameterFloat> frequency;
+    LinkableParameter<AudioParameterFloat> resonance;
+    LinkableParameter<AudioParameterFloat> bandwidth;
     std::array<LinkableParameter<AudioParameterFloat>, 2> gain;
 
     std::unique_ptr<SplineParameters> spline;
@@ -99,17 +91,14 @@ private:
 
   avec::SplineHolder<Vec2d> splines;
 
-  std::array<aligned_ptr<avec::OnePole<Vec2d>>, 2> onePole;
-  std::array<aligned_ptr<avec::StateVariable<Vec2d>>, 2> svf;
+  aligned_ptr<avec::StateVariable<Vec2d>> filter;
 
-  std::array<FilterType, 2> lastFilter = { { FilterType::none,
-                                             FilterType::none } };
+  std::array<FilterType, 2> lastFilterType = { { FilterType::waveShaper,
+                                                 FilterType::waveShaper } };
 
   double automationTime = 50.0;
 
   double gain[2][2] = { { 1.0, 1.0 }, { 1.0, 1.0 } };
-
-  InterleavedBuffer<double> interleavedInput{ 2 };
 
   // buffer for single precision processing call
   AudioBuffer<double> floatToDouble;
@@ -121,7 +110,9 @@ private:
   oversimple::OversamplingGetter<double>& oversamplingGetter;
   oversimple::AsyncOversampling::Awaiter oversamplingAwaiter;
 
-  void applyFilter(VecBuffer<Vec2d>& io, bool useOutputFilter);
+  void applyFilter(VecBuffer<Vec2d>& io,
+                   avec::SplineInterface<Vec2d>* spline,
+                   avec::SplineAutomatorInterface<Vec2d>* splineAutomator);
 
 public:
   static constexpr int maxNumKnots = 15;

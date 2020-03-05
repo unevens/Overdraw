@@ -46,13 +46,12 @@ private:
   AttachedToggle linearPhase;
   Label oversamplingLabel{ {}, "Oversampling" };
 
-  std::array<AttachedComboBox, 2> filter;
-  Label inputFilterLabel{ {}, "Input Filter" };
-  Label outputFilterLabel{ {}, "Output Filter" };
+  LinkableComboBox filterTypeControl;
 
   std::array<LinkableControl<AttachedSlider>, 2> gain;
-  std::array<LinkableControl<AttachedSlider>, 2> cutoff;
-  std::array<std::unique_ptr<LinkableControl<AttachedSlider>>, 2> resonance;
+  LinkableControl<AttachedSlider> frequency;
+  LinkableControl<AttachedSlider> resonance;
+  LinkableControl<AttachedSlider> bandwidth;
   LinkableControl<AttachedToggle> symmetry;
   ChannelLabels channelLabels;
   ChannelLabels inputGainLabels;
@@ -66,12 +65,13 @@ private:
   Image background;
 
   std::array<std::unique_ptr<FloatAttachment>, 2> filterAttachment;
+  std::unique_ptr<BoolAttachment> linkFilterAttachment;
 
   using FilterType = OverdrawAudioProcessor::FilterType;
   std::array<FilterType, 2> filterType;
 
-  void onFilterChanged(int filterIndex);
-  void setupFilterControls(int filterIndex);
+  void onFilterChanged();
+  void setupFilterControls();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OverdrawAudioProcessorEditor)
 };
