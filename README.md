@@ -9,12 +9,9 @@
 - The response curves are smoothly automatable splines.
 - Optional Mid/Side Stereo processing.
 - All parameters, and all splines, can have different values on the Left channel and on the Right channel - or on the Mid channel and on the Side channel, when in Mid/Side Stero Mode.
-- Dry-Wet.
-- Optional DC offset.
-- Optional DC removal filter.
 - Optional symmtric spline editing.
 - Up to 32x Oversampling with either Minimum Phase or Linear Phase Antialiasing.
-- Customizable smoothing time, used to avoid zips when automating the knots of the splines, and the input and output gains.
+- Customizable smoothing time, used to avoid zips when automating the knots of the splines, or the input and output gains.
 
 ## Build
 
