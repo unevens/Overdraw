@@ -43,23 +43,11 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
               "Output Gain",
               p.getOverdrawParameters().gain[1] } } }
 
-  , frequency{ *p.getOverdrawParameters().apvts,
-               "Frequency",
-               p.getOverdrawParameters().frequency }
-
-  , resonance(*p.getOverdrawParameters().apvts,
-              "Resonance",
-              p.getOverdrawParameters().resonance)
-
-  , bandwidth(*p.getOverdrawParameters().apvts,
-              "Bandwidth",
-              p.getOverdrawParameters().bandwidth)
-
   , symmetry(*p.getOverdrawParameters().apvts,
              "Symmetry",
              p.getOverdrawParameters().symmetry)
 
-  , channelLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
+  , symmetryLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
   , inputGainLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
@@ -74,11 +62,6 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
                 *p.getOverdrawParameters().apvts,
                 "Linear-Phase-Oversampling")
 
-  , filterTypeControl{ *p.getOverdrawParameters().apvts,
-                       "Filter",
-                       OverdrawAudioProcessor::filterNames,
-                       p.getOverdrawParameters().filter }
-
   , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
 
   , background(ImageCache::getFromMemory(BinaryData::background_png,
@@ -90,14 +73,10 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(oversamplingLabel);
   addAndMakeVisible(smoothingLabel);
   addAndMakeVisible(symmetry);
-  addAndMakeVisible(filterTypeControl);
-  addAndMakeVisible(channelLabels);
+  addAndMakeVisible(symmetryLabels);
   addAndMakeVisible(inputGainLabels);
   addAndMakeVisible(outputGainLabels);
   addAndMakeVisible(url);
-  addAndMakeVisible(frequency);
-  addAndMakeVisible(resonance);
-  addAndMakeVisible(bandwidth);
 
   for (int i = 0; i < 2; ++i) {
     addAndMakeVisible(gain[i]);
@@ -125,20 +104,11 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   applyTableSettings(inputGainLabels);
   applyTableSettings(outputGainLabels);
-  applyTableSettings(channelLabels);
+  applyTableSettings(symmetryLabels);
   applyTableSettings(symmetry);
-
-  applyTableSettings(filterTypeControl);
-  applyTableSettings(frequency);
-  applyTableSettings(resonance);
-  applyTableSettings(bandwidth);
 
   for (int i = 0; i < 2; ++i) {
     applyTableSettings(gain[i]);
-  }
-
-  for (int c = 0; c < 2; ++c) {
-    frequency.getControl(c).setTextValueSuffix("Hz");
   }
 
   for (int i = 0; i < 2; ++i) {
@@ -146,22 +116,6 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
       gain[i].getControl(c).setTextValueSuffix("dB");
     }
   }
-
-  for (int c = 0; c < 2; ++c) {
-    filterAttachment[c] = std::make_unique<FloatAttachment>(
-      *p.getOverdrawParameters().apvts,
-      c == 0 ? "Filter_ch0" : "Filter_ch1",
-      [this] { onFilterChanged(); },
-      NormalisableRange<float>(
-        0.f, OverdrawAudioProcessor::numFilterTypes, 1.f));
-  }
-
-  linkFilterAttachment =
-    std::make_unique<BoolAttachment>(*p.getOverdrawParameters().apvts,
-                                     "Filter_is_linked",
-                                     [this] { onFilterChanged(); });
-
-  onFilterChanged();
 
   smoothing.getControl().setTextValueSuffix("ms");
 
@@ -180,7 +134,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   url.setText("www.unevens.net", dontSendNotification);
   url.setJustification(Justification::left);
 
-  setSize(825._p, 995._p);
+  setSize(825._p, 850._p);
 }
 
 OverdrawAudioProcessorEditor::~OverdrawAudioProcessorEditor() {}
@@ -223,15 +177,11 @@ OverdrawAudioProcessorEditor::resized()
 
   int const gainLeft = spline.getBounds().getRight() + offset + 1;
 
-  int const inputGainTopAlignment = splineEditorSide - 320._p;
-  int const inputGainBottomAlignment =
-    selectedKnot.getBottom() + 1 - offset - 2 * 160._p;
-
   int const inputGainTop =
-    inputGainTopAlignment +
-    0.0 * (inputGainBottomAlignment - inputGainTopAlignment);
+    selectedKnot.getBottom() + 1 - 2 * offset - 3 * 160._p;
 
   int const outputGainTop = inputGainTop + offset + 160._p;
+  int const symmetryTop = outputGainTop + offset + 160._p;
 
   inputGainLabels.setTopLeftPosition(gainLeft, inputGainTop);
   inputGainLabels.setSize(50._p, 160._p);
@@ -245,24 +195,11 @@ OverdrawAudioProcessorEditor::resized()
   gain[1].setTopLeftPosition(gainLeft + 50._p - 1, outputGainTop);
   gain[1].setSize(140._p, 160._p);
 
-  int const top = selectedKnot.getBounds().getBottom() + offset;
+  symmetryLabels.setTopLeftPosition(gainLeft, symmetryTop);
+  symmetryLabels.setSize(50._p, 160._p);
 
-  int left = 10._p;
-
-  auto const resize = [&](auto& component, int width) {
-    component.setTopLeftPosition(left, top);
-    component.setSize(width, 160._p);
-    left += width - 1;
-  };
-
-  resize(channelLabels, 50._p);
-
-  resize(symmetry, 120._p);
-  resize(filterTypeControl,
-         getWidth() - 2 * offset - 3 * (140._p) - (120._p) - (50._p) + 4);
-  resize(frequency, 140._p);
-  resize(resonance, 140._p);
-  resize(bandwidth, 140._p);
+  symmetry.setTopLeftPosition(gainLeft + 50._p - 1, symmetryTop);
+  symmetry.setSize(140._p, 160._p);
 
   Grid grid;
   using Track = Grid::TrackInfo;
@@ -310,52 +247,4 @@ OverdrawAudioProcessorEditor::resized()
     spline.getBottom() - offset,
     jmax(spline.getWidth(), selectedKnot.getWidth()),
     selectedKnot.getBottom() - spline.getBottom() + offset);
-}
-
-void
-OverdrawAudioProcessorEditor::onFilterChanged()
-{
-  if (!linkFilterAttachment) {
-    return;
-  }
-
-  for (int i = 0; i < 2; ++i) {
-
-    if (!filterAttachment[i]) {
-      return;
-    }
-
-    bool const isLinked = linkFilterAttachment->getValue();
-
-    filterType[i] = static_cast<FilterType>(
-      (int)(filterAttachment[isLinked ? 0 : i]->getValue()));
-  }
-
-  setupFilterControls();
-}
-
-void
-OverdrawAudioProcessorEditor::setupFilterControls()
-{
-  for (int i = 0; i < 2; ++i) {
-    bool const useFilter = filterType[i] != FilterType::waveShaper;
-
-    bool const useBandwidth = filterType[i] == FilterType::normalizedBandPass;
-
-    resonance.getControl(i).setEnabled(useFilter && !useBandwidth);
-    bandwidth.getControl(i).setEnabled(useFilter && useBandwidth);
-    frequency.getControl(i).setEnabled(useFilter);
-  }
-
-  auto const enableLabelAndLink = [](auto& c) {
-    bool const isEnabled =
-      c.getControl(0).isEnabled() || c.getControl(1).isEnabled();
-    c.getLabel().setEnabled(isEnabled);
-    c.getLabel().setEnabled(isEnabled);
-    c.getLinked()->setEnabled(isEnabled);
-  };
-
-  enableLabelAndLink(resonance);
-  enableLabelAndLink(bandwidth);
-  enableLabelAndLink(frequency);
 }

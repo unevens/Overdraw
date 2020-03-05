@@ -23,10 +23,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "OversamplingParameters.h"
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
-#include "avec/dsp/OnePole.hpp"
-#include "avec/dsp/SimpleHighPass.hpp"
 #include "avec/dsp/Spline.hpp"
-#include "avec/dsp/StateVariable.hpp"
 #include "oversimple/AsyncOversampling.hpp"
 #include <JuceHeader.h>
 
@@ -43,23 +40,6 @@ constexpr static long double operator"" _p(long double px)
 
 class OverdrawAudioProcessor : public AudioProcessor
 {
-public:
-  enum class FilterType
-  {
-    waveShaper = 0,
-    lowPass,
-    highPass,
-    bandPass,
-    normalizedBandPass,
-  };
-
-  static inline const StringArray filterNames = {
-    "WaveShaper", "Low Pass", "High Pass", "Band Pass", "Band Pass Unit Gain",
-  };
-
-  static constexpr int numFilterTypes = 5;
-
-private:
   struct Parameters
   {
     AudioParameterBool* midSide;
@@ -70,10 +50,6 @@ private:
 
     LinkableParameter<WrappedBoolParameter> symmetry;
 
-    LinkableParameter<AudioParameterChoice> filter;
-    LinkableParameter<AudioParameterFloat> frequency;
-    LinkableParameter<AudioParameterFloat> resonance;
-    LinkableParameter<AudioParameterFloat> bandwidth;
     std::array<LinkableParameter<AudioParameterFloat>, 2> gain;
 
     std::unique_ptr<SplineParameters> spline;
@@ -91,11 +67,6 @@ private:
 
   avec::SplineHolder<Vec2d> splines;
 
-  aligned_ptr<avec::StateVariable<Vec2d>> filter;
-
-  std::array<FilterType, 2> lastFilterType = { { FilterType::waveShaper,
-                                                 FilterType::waveShaper } };
-
   double automationTime = 50.0;
 
   double gain[2][2] = { { 1.0, 1.0 }, { 1.0, 1.0 } };
@@ -109,10 +80,6 @@ private:
   oversimple::AsyncOversampling asyncOversampling;
   oversimple::OversamplingGetter<double>& oversamplingGetter;
   oversimple::AsyncOversampling::Awaiter oversamplingAwaiter;
-
-  void applyFilter(VecBuffer<Vec2d>& io,
-                   avec::SplineInterface<Vec2d>* spline,
-                   avec::SplineAutomatorInterface<Vec2d>* splineAutomator);
 
 public:
   static constexpr int maxNumKnots = 15;

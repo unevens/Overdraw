@@ -95,21 +95,10 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   symmetry = createLinkableBoolParameters("Symmetry", true);
 
-  filter = createLinkableChoiceParameters("Filter", filterNames);
-
   for (int i = 0; i < 2; ++i) {
     gain[i] = createLinkableFloatParameters(
       i == 0 ? "Input-Gain" : "Output-Gain", 0.f, -48.f, +48.f);
   }
-
-  frequency =
-    createLinkableFloatParameters("Cutoff", 1000.f, 4.f, 20000.f, 1.0f);
-
-  resonance =
-    createLinkableFloatParameters("Resonance", 0.f, 0.f, 10.0f, 0.001f);
-
-  bandwidth =
-    createLinkableFloatParameters("Bandwidth", 1.f, 0.01f, 5.f, 0.01f);
 
   auto const isKnotActive = [&](int knotIndex) {
     std::array<int, 3> enabledKnotIndices = { 7, 9, 11 };
@@ -146,14 +135,11 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , splines(avec::SplineHolder<Vec2d>::make<maxNumKnots>(true))
 
-  , filter(avec::Aligned<avec::StateVariable<Vec2d>>::make())
-
   , asyncOversampling([this] {
     auto oversampling = OversamplingSettings{};
     oversampling.numScalarToVecUpsamplers = 1;
     oversampling.numVecToScalarDownsamplers = 1;
     oversampling.numChannels = 2;
-    oversampling.numInterleavedBuffers = 1;
     oversampling.updateLatency = [this](int latency) {
       setLatencySamples(latency);
     };
@@ -201,29 +187,11 @@ OverdrawAudioProcessor::reset()
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;
 
-  double const invSampleRate = 1.0 / getSampleRate();
-
-  for (int c = 0; c < 2; ++c) {
-
-    auto const filterType =
-      static_cast<FilterType>(parameters.filter.get(c)->getIndex());
-
-    auto const frequency = invSampleRate * parameters.frequency.get(c)->get();
-
-    if (filterType == FilterType::normalizedBandPass) {
-      filter->setupNormalizedBandPass(
-        parameters.bandwidth.get(c)->get(), frequency, c);
-    }
-    else {
-      filter->setFrequency(frequency, c);
-      filter->setResonance(parameters.resonance.get(c)->get(), c);
-    }
-
-    for (int i = 0; i < 2; ++i) {
+  for (int i = 0; i < 2; ++i) {
+    for (int c = 0; c < 2; ++c) {
       gain[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
     }
   }
-  filter->reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
