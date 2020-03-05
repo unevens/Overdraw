@@ -18,8 +18,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "PluginProcessor.h"
-#include "avec/dsp/SimpleHighPassMacro.hpp"
-#include "avec/dsp/SplineMacro.hpp"
+#include "adsp/SplineMacro.hpp"
 
 static void
 leftRightToMidSide(double** io, int const n)

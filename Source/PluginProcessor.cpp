@@ -133,7 +133,7 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , parameters(*this)
 
-  , splines(avec::SplineHolder<Vec2d>::make<maxNumKnots>(true))
+  , splines(adsp::SplineHolder<Vec2d>::make<maxNumKnots>(true))
 
   , asyncOversampling([this] {
     auto oversampling = OversamplingSettings{};

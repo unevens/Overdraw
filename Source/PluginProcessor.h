@@ -23,7 +23,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "OversamplingParameters.h"
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
-#include "avec/dsp/Spline.hpp"
+#include "adsp/Spline.hpp"
 #include "oversimple/AsyncOversampling.hpp"
 #include <JuceHeader.h>
 
@@ -65,7 +65,7 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   // splines
 
-  avec::SplineHolder<Vec2d> splines;
+  adsp::SplineHolder<Vec2d> splines;
 
   double automationTime = 50.0;
 
