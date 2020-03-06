@@ -349,10 +349,10 @@
  #define JucePlugin_ManufacturerEmail      "hi@unevens.net"
 #endif
 #ifndef  JucePlugin_ManufacturerCode
- #define JucePlugin_ManufacturerCode       0x4d616e75 // 'Manu'
+ #define JucePlugin_ManufacturerCode       0x556e4576 // 'UnEv'
 #endif
 #ifndef  JucePlugin_PluginCode
- #define JucePlugin_PluginCode             0x43787866 // 'Cxxf'
+ #define JucePlugin_PluginCode             0x4f647277 // 'Odrw'
 #endif
 #ifndef  JucePlugin_IsSynth
  #define JucePlugin_IsSynth                0
