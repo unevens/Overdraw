@@ -20,10 +20,6 @@
       <FILE id="iXB9E7" name="Attachments.h" compile="0" resource="0" file="juicy/Attachments.h"/>
       <FILE id="meNnpf" name="GainVuMeter.cpp" compile="1" resource="0" file="juicy/GainVuMeter.cpp"/>
       <FILE id="TnjL95" name="GainVuMeter.h" compile="0" resource="0" file="juicy/GainVuMeter.h"/>
-      <FILE id="aiAzdl" name="GammaEnvEditor.cpp" compile="1" resource="0"
-            file="juicy/GammaEnvEditor.cpp"/>
-      <FILE id="xxp9OM" name="GammaEnvEditor.h" compile="0" resource="0"
-            file="juicy/GammaEnvEditor.h"/>
       <FILE id="b7clfs" name="Linkables.h" compile="0" resource="0" file="juicy/Linkables.h"/>
       <FILE id="uoZVW6" name="OversamplingParameters.h" compile="0" resource="0"
             file="juicy/OversamplingParameters.h"/>
