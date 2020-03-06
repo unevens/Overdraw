@@ -2,14 +2,13 @@
 
 ![Overdraw GUI](Images/screenshot.jpg?raw=true 'screenshot')
 
-[Overdraw](https://www.unevens.net/overdraw.html) is an audio plug-in that implements a waveshaper in which **the response curve of each channel is an automatable spline**.
+[Overdraw](https://www.unevens.net/overdraw.html) is an audio plug-in that implements a waveshaper in which **the transfer function of each channel is an automatable spline**.
 
 ## Features
 
-- The response curves are smoothly automatable splines.
+- The transfer functions are smoothly automatable splines.
 - Optional Mid/Side Stereo processing.
 - All parameters, and all splines, can have different values on the Left channel and on the Right channel - or on the Mid channel and on the Side channel, when in Mid/Side Stero Mode.
-- Optional symmtric spline editing.
 - Up to 32x Oversampling with either Minimum Phase or Linear Phase Antialiasing.
 - Customizable smoothing time, used to avoid zips when automating the knots of the splines, or the input and output gains.
 
