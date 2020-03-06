@@ -180,10 +180,13 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   // downsampling
 
   oversampling.vecToVecDownsamplers[0]->processBlock(
-    upsampledBuffer, 2, numSamples);
+    upsampledBuffer, 2, numUpsampledSamples, numSamples);
 
   oversampling.vecToVecDownsamplers[1]->processBlock(
-    oversampling.scalarToVecUpsamplers[1]->getOutput(), 2, numSamples);
+    oversampling.scalarToVecUpsamplers[1]->getOutput(),
+    2,
+    numUpsampledSamples,
+    numSamples);
 
   // dry-wet and output gain
 
