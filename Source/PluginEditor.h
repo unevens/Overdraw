@@ -21,6 +21,7 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "PluginProcessor.h"
 #include "SplineEditor.h"
+#include "GainVuMeter.h"
 #include <JuceHeader.h>
 
 class OverdrawAudioProcessorEditor : public AudioProcessorEditor
@@ -37,6 +38,8 @@ private:
 
   SplineEditor spline;
   SplineKnotEditor selectedKnot;
+
+  GainVuMeter vuMeter;
 
   AttachedToggle midSide;
   AttachedSlider smoothing;

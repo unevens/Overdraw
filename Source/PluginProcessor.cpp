@@ -189,10 +189,13 @@ OverdrawAudioProcessor::reset()
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;
 
+  vuMeterBuffer.fill(0.0);
+
   for (int c = 0; c < 2; ++c) {
     wetAmount[c] = 0.01 * parameters.wet.get(c)->get();
     for (int i = 0; i < 2; ++i) {
       gain[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
+      vuMeterResults[c] = 0.0;
     }
   }
 }

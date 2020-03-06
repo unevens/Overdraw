@@ -62,6 +62,10 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
 
+  , vuMeter({ { &p.vuMeterResults[0], &p.vuMeterResults[1] } },
+            36.f,
+            [](float x) { return std::sqrt(x); })
+
   , background(ImageCache::getFromMemory(BinaryData::background_png,
                                          BinaryData::background_pngSize))
 
@@ -72,6 +76,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(smoothingLabel);
   addAndMakeVisible(symmetry);
   addAndMakeVisible(wet);
+  addAndMakeVisible(vuMeter);
   addAndMakeVisible(url);
   addAndMakeVisible(channelLabels);
 
@@ -86,6 +91,8 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   midSide.getControl().setButtonText("Mid Side");
   linearPhase.getControl().setButtonText("Linear Phase");
+
+  vuMeter.internalColour = backgroundColour;
 
   lineColour = p.looks.frontColour.darker(1.f);
 
@@ -169,8 +176,7 @@ OverdrawAudioProcessorEditor::resized()
   constexpr auto splineEditorSide = 605._p;
   constexpr auto knotEditorHeight = 160._p;
 
-  spline.setTopLeftPosition((getWidth() - splineEditorSide) * 0.5 + 2,
-                            offset + 1);
+  spline.setTopLeftPosition(offset + 1, offset + 1);
   spline.setSize(splineEditorSide - 2, splineEditorSide - 2);
 
   selectedKnot.setTopLeftPosition(offset, splineEditorSide + 2 * offset);
@@ -245,6 +251,9 @@ OverdrawAudioProcessorEditor::resized()
 
     grid.performLayout(juce::Rectangle<int>(left, top, width, 120._p));
   }
+
+  vuMeter.setTopLeftPosition(left + 0.5f * (width - 89._p), offset);
+  vuMeter.setSize(89._p, splineEditorSide);
 
   url.setTopLeftPosition(10._p, getHeight() - 18._p);
   url.setSize(160._p, 16._p);

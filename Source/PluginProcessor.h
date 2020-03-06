@@ -76,6 +76,8 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   ScalarBuffer<double> dryBuffer{ 2 };
 
+  VecBuffer<Vec2d> vuMeterBuffer{ 3 };
+
   // buffer for single precision processing call
   AudioBuffer<double> floatToDouble;
 
@@ -91,6 +93,7 @@ public:
 
   // for gui
   SimpleLookAndFeel looks;
+  std::array<std::atomic<float>, 2> vuMeterResults;
 
   Parameters& getOverdrawParameters() { return parameters; }
 

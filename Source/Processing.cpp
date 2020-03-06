@@ -57,6 +57,13 @@ applyGain(double** io,
   }
 }
 
+static inline Vec2d
+toDB(Vec2d linear)
+{
+  return (10.0 / 2.30258509299404568402) *
+         log(linear + std::numeric_limits<float>::min());
+}
+
 void
 OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
                                      MidiBuffer& midi)
@@ -188,10 +195,19 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     numUpsampledSamples,
     numSamples);
 
-  // dry-wet and output gain
+  // dry-wet, output gain and vu meter
 
   auto& wetOutput = oversampling.vecToVecDownsamplers[0]->getOutput();
   auto& dryOutput = oversampling.vecToVecDownsamplers[1]->getOutput();
+
+  constexpr double vuMeterFrequency = 10.0;
+
+  Vec2d vuMeterAlpha =
+    exp(-MathConstants<double>::twoPi * invSampleRate * vuMeterFrequency);
+
+  auto vuMeterDryBuffer = vuMeterBuffer[0];
+  auto vuMeterWetBuffer = vuMeterBuffer[1];
+  auto vuMeterBufferDB = vuMeterBuffer[2];
 
   if (isWetPassNeeded) {
 
@@ -206,37 +222,63 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     Vec2d outputGain = Vec2d().load(gain[1]);
     Vec2d outputGainTarget = Vec2d().load(gainTarget[1]);
 
+    Vec2d vuMeterDry = vuMeterDryBuffer;
+    Vec2d vuMeterWet = vuMeterWetBuffer;
+
     for (int i = 0; i < numSamples; ++i) {
       amount = alpha * (amount - amountTarget) + amountTarget;
       outputGain = alpha * (outputGain - outputGainTarget) + outputGainTarget;
       Vec2d wet = outputGain * wetBuffer[i];
       Vec2d dry = dryBuffer[i];
       wetBuffer[i] = amount * (wet - dry) + dry;
+      Vec2d wet2 = wet * wet;
+      Vec2d dry2 = dry * dry;
+      vuMeterWet = vuMeterAlpha * (vuMeterWet - wet2) + wet2;
+      vuMeterDry = vuMeterAlpha * (vuMeterDry - dry2) + dry2;
     }
 
     amount.store(wetAmount);
     outputGain.store(gain[1]);
+
+    vuMeterWetBuffer = vuMeterWet;
+    vuMeterDryBuffer = vuMeterDry;
+    vuMeterBufferDB = toDB(vuMeterWet) - toDB(vuMeterDry);
   }
   else {
     if (!isBypassing) {
 
       auto& wetBuffer = wetOutput.getBuffer2(0);
+      auto& dryBuffer = dryOutput.getBuffer2(0);
 
       Vec2d alpha = automationAlpha;
+
       Vec2d outputGain = Vec2d().load(gain[1]);
       Vec2d outputGainTarget = Vec2d().load(gainTarget[1]);
 
+      Vec2d vuMeterDry = vuMeterDryBuffer;
+      Vec2d vuMeterWet = vuMeterWetBuffer;
       for (int i = 0; i < numSamples; ++i) {
         outputGain = alpha * (outputGain - outputGainTarget) + outputGainTarget;
-        wetBuffer[i] = outputGain * wetBuffer[i];
+        Vec2d wet = outputGain * wetBuffer[i];
+        wetBuffer[i] = wet;
+        Vec2d dry = dryBuffer[i];
+        Vec2d wet2 = wet * wet;
+        Vec2d dry2 = dry * dry;
+        vuMeterWet = vuMeterAlpha * (vuMeterWet - wet2) + wet2;
+        vuMeterDry = vuMeterAlpha * (vuMeterDry - dry2) + dry2;
       }
 
       outputGain.store(gain[1]);
+
+      vuMeterWetBuffer = vuMeterWet;
+      vuMeterDryBuffer = vuMeterDry;
+      vuMeterBufferDB = toDB(vuMeterWet) - toDB(vuMeterDry);
     }
   }
 
   if (isBypassing) {
     dryOutput.deinterleave(ioAudio, 2, numSamples);
+    vuMeterBufferDB = 0.0;
   }
   else {
     wetOutput.deinterleave(ioAudio, 2, numSamples);
@@ -247,4 +289,9 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   if (isMidSideEnabled) {
     midSideToLeftRight(ioAudio, numSamples);
   }
+
+  // update vu meter
+
+  vuMeterResults[0] = vuMeterBufferDB[0];
+  vuMeterResults[1] = vuMeterBufferDB[1];
 }
