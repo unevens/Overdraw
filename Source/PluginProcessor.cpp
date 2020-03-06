@@ -95,10 +95,10 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   symmetry = createLinkableBoolParameters("Symmetry", true);
 
-  for (int i = 0; i < 2; ++i) {
-    gain[i] = createLinkableFloatParameters(
-      i == 0 ? "Input-Gain" : "Output-Gain", 0.f, -48.f, +48.f);
-  }
+  wet = createLinkableFloatParameters("Wet", 100.f, 0.f, 100.f, 1.f);
+
+  gain[0] = createLinkableFloatParameters("Input-Gain", 0.f, -48.f, 48.f);
+  gain[1] = createLinkableFloatParameters("Output-Gain", 0.f, -48.f, 48.f);
 
   auto const isKnotActive = [&](int knotIndex) {
     std::array<int, 3> enabledKnotIndices = { 7, 9, 11 };
@@ -137,8 +137,8 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , asyncOversampling([this] {
     auto oversampling = OversamplingSettings{};
-    oversampling.numScalarToVecUpsamplers = 1;
-    oversampling.numVecToScalarDownsamplers = 1;
+    oversampling.numScalarToVecUpsamplers = 2;
+    oversampling.numVecToVecDownsamplers = 2;
     oversampling.numChannels = 2;
     oversampling.updateLatency = [this](int latency) {
       setLatencySamples(latency);
@@ -173,6 +173,8 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
   floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
 
+  dryBuffer.setNumSamples(samplesPerBlock);
+
   reset();
 
   oversamplingAwaiter.await();
@@ -187,8 +189,9 @@ OverdrawAudioProcessor::reset()
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;
 
-  for (int i = 0; i < 2; ++i) {
-    for (int c = 0; c < 2; ++c) {
+  for (int c = 0; c < 2; ++c) {
+    wetAmount[c] = 0.01 * parameters.wet.get(c)->get();
+    for (int i = 0; i < 2; ++i) {
       gain[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
     }
   }
@@ -305,9 +308,9 @@ OverdrawAudioProcessor::getTailLengthSeconds() const
 int
 OverdrawAudioProcessor::getNumPrograms()
 {
-  return 1; // NB: some hosts don't cope very well if you tell them there are 0
-            // programs, so this should be at least 1, even if you're not really
-            // implementing programs.
+  return 1; // NB: some hosts don't cope very well if you tell them there are
+            // 0 programs, so this should be at least 1, even if you're not
+            // really implementing programs.
 }
 
 int

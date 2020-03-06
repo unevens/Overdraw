@@ -102,8 +102,11 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   }
 
   double gainTarget[2][2];
+  double wetAmountTarget[2];
 
   for (int c = 0; c < 2; ++c) {
+
+    wetAmountTarget[c] = 0.01 * parameters.wet.get(c)->get();
 
     for (int i = 0; i < 2; ++i) {
       gainTarget[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
@@ -115,10 +118,33 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     }
   }
 
+  bool const isWetPassNeeded = [&] {
+    double m =
+      wetAmountTarget[0] * wetAmountTarget[1] * wetAmount[0] * wetAmount[1];
+    if (m == 1.0) {
+      return false;
+    }
+    if (m == 0.0) {
+      return !(wetAmountTarget[0] == 0.0 && wetAmountTarget[1] == 0.0 &&
+               wetAmount[0] == 0.0 && wetAmount[1] == 0.0);
+    }
+    return true;
+  }();
+
+  bool const isBypassing = !isWetPassNeeded && (wetAmount[0] == 0.0);
+
   // mid side
 
   if (isMidSideEnabled) {
     leftRightToMidSide(ioAudio, numSamples);
+  }
+
+  // copy the dry signal
+
+  dryBuffer.setNumSamples(numSamples);
+
+  for (int c = 0; c < 2; ++c) {
+    std::copy(ioAudio[c], ioAudio[c] + numSamples, dryBuffer.get()[c]);
   }
 
   // input gain
@@ -132,6 +158,9 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   int const numUpsampledSamples =
     oversampling.scalarToVecUpsamplers[0]->processBlock(ioAudio, 2, numSamples);
 
+  oversampling.scalarToVecUpsamplers[1]->processBlock(
+    dryBuffer.get(), 2, numSamples);
+
   if (numUpsampledSamples == 0) {
     for (auto i = 0; i < totalNumOutputChannels; ++i) {
       buffer.clear(i, 0, numSamples);
@@ -144,16 +173,70 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // waveshaping
 
-  if (spline) {
+  if (spline && !isBypassing) {
     spline->processBlock(upsampledIo, upsampledIo, splineAutomator);
   }
 
-  // downsample
+  // downsampling
 
-  oversampling.vecToScalarDownsamplers[0]->processBlock(
-    upsampledBuffer, ioAudio, 2, numSamples);
+  oversampling.vecToVecDownsamplers[0]->processBlock(
+    upsampledBuffer, 2, numSamples);
 
-  applyGain(ioAudio, gainTarget[1], gain[1], automationAlpha, numSamples);
+  oversampling.vecToVecDownsamplers[1]->processBlock(
+    oversampling.scalarToVecUpsamplers[1]->getOutput(), 2, numSamples);
+
+  // wet
+  auto& wetOutput = oversampling.vecToVecDownsamplers[0]->getOutput();
+  auto& dryOutput = oversampling.vecToVecDownsamplers[1]->getOutput();
+
+  if (isWetPassNeeded) {
+
+    auto& dryBuffer = dryOutput.getBuffer2(0);
+    auto& wetBuffer = wetOutput.getBuffer2(0);
+
+    Vec2d alpha = automationAlpha;
+
+    Vec2d amount = Vec2d().load(wetAmount);
+    Vec2d amountTarget = Vec2d().load(wetAmountTarget);
+
+    Vec2d outputGain = Vec2d().load(gain[1]);
+    Vec2d outputGainTarget = Vec2d().load(gainTarget[1]);
+
+    for (int i = 0; i < numUpsampledSamples; ++i) {
+      amount = alpha * (amount - amountTarget) + amountTarget;
+      outputGain = alpha * (outputGain - outputGainTarget) + outputGainTarget;
+      Vec2d wet = outputGain * wetBuffer[i];
+      Vec2d dry = dryBuffer[i];
+      wetBuffer[i] = amount * (wet - dry) + dry;
+    }
+
+    amount.store(wetAmount);
+    outputGain.store(gain[1]);
+  }
+  else {
+    if (!isBypassing) {
+
+      auto& wetBuffer = wetOutput.getBuffer2(0);
+
+      Vec2d alpha = automationAlpha;
+      Vec2d outputGain = Vec2d().load(gain[1]);
+      Vec2d outputGainTarget = Vec2d().load(gainTarget[1]);
+
+      for (int i = 0; i < numUpsampledSamples; ++i) {
+        outputGain = alpha * (outputGain - outputGainTarget) + outputGainTarget;
+        wetBuffer[i] = outputGain * wetBuffer[i];
+      }
+
+      outputGain.store(gain[1]);
+    }
+  }
+
+  if (isBypassing) {
+    dryOutput.deinterleave(ioAudio, 2, numSamples);
+  }
+  else {
+    wetOutput.deinterleave(ioAudio, 2, numSamples);
+  }
 
   if (isMidSideEnabled) {
     midSideToLeftRight(ioAudio, numSamples);

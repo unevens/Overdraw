@@ -47,10 +47,9 @@ private:
   Label oversamplingLabel{ {}, "Oversampling" };
 
   std::array<LinkableControl<AttachedSlider>, 2> gain;
+  LinkableControl<AttachedSlider> wet;
   LinkableControl<AttachedToggle> symmetry;
-  ChannelLabels symmetryLabels;
-  ChannelLabels inputGainLabels;
-  ChannelLabels outputGainLabels;
+  ChannelLabels channelLabels;
 
   TextEditor url;
 

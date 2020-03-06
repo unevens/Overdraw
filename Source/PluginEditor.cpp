@@ -43,15 +43,13 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
               "Output Gain",
               p.getOverdrawParameters().gain[1] } } }
 
+  , wet(*p.getOverdrawParameters().apvts, "Wet", p.getOverdrawParameters().wet)
+
   , symmetry(*p.getOverdrawParameters().apvts,
              "Symmetry",
              p.getOverdrawParameters().symmetry)
 
-  , symmetryLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
-
-  , inputGainLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
-
-  , outputGainLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
+  , channelLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
   , oversampling(*this,
                  *p.getOverdrawParameters().apvts,
@@ -73,10 +71,9 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(oversamplingLabel);
   addAndMakeVisible(smoothingLabel);
   addAndMakeVisible(symmetry);
-  addAndMakeVisible(symmetryLabels);
-  addAndMakeVisible(inputGainLabels);
-  addAndMakeVisible(outputGainLabels);
+  addAndMakeVisible(wet);
   addAndMakeVisible(url);
+  addAndMakeVisible(channelLabels);
 
   for (int i = 0; i < 2; ++i) {
     addAndMakeVisible(gain[i]);
@@ -102,10 +99,9 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
     linkedControls.tableSettings.backgroundColour = backgroundColour;
   };
 
-  applyTableSettings(inputGainLabels);
-  applyTableSettings(outputGainLabels);
-  applyTableSettings(symmetryLabels);
+  applyTableSettings(channelLabels);
   applyTableSettings(symmetry);
+  applyTableSettings(wet);
 
   for (int i = 0; i < 2; ++i) {
     applyTableSettings(gain[i]);
@@ -134,7 +130,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   url.setText("www.unevens.net", dontSendNotification);
   url.setJustification(Justification::left);
 
-  setSize(825._p, 850._p);
+  setSize(825._p, 1010._p);
 }
 
 OverdrawAudioProcessorEditor::~OverdrawAudioProcessorEditor() {}
@@ -148,16 +144,20 @@ OverdrawAudioProcessorEditor::paint(Graphics& g)
 
   constexpr int left = 625._p;
   constexpr int width = (190._p) - 1;
-  constexpr int height = 240._p;
-  constexpr int top = 10._p;
+  constexpr int top = 625._p;
 
-  g.fillRect(juce::Rectangle<int>(left, top, width, height));
+  auto const makeRect = [&](juce::Rectangle<int> r) {
+    g.setColour(backgroundColour);
+    g.fillRect(r);
+    g.setColour(lineColour);
+    g.drawRect(r, 1);
+  };
+
+  makeRect({ left, top, width, (int)40._p });
+  makeRect({ left, top + (int)80._p, width, (int)80._p });
+  makeRect({ left, top + (int)210._p, width, (int)120._p });
 
   g.setColour(lineColour);
-  g.drawRect(left, top, width, 45._p, 1);
-  g.drawRect(left, top, width, 125._p, 1);
-  g.drawRect(left, top, width, height, 1);
-
   g.drawRect(spline.getBounds().expanded(1, 1), 1);
 }
 
@@ -169,75 +169,82 @@ OverdrawAudioProcessorEditor::resized()
   constexpr auto splineEditorSide = 605._p;
   constexpr auto knotEditorHeight = 160._p;
 
-  spline.setTopLeftPosition(offset + 1, offset + 1);
+  spline.setTopLeftPosition((getWidth() - splineEditorSide) * 0.5 + 2,
+                            offset + 1);
   spline.setSize(splineEditorSide - 2, splineEditorSide - 2);
 
   selectedKnot.setTopLeftPosition(offset, splineEditorSide + 2 * offset);
   selectedKnot.setSize(140._p * 4 + (50._p), 160._p);
 
-  int const gainLeft = spline.getBounds().getRight() + offset + 1;
+  int left = offset;
 
-  int const inputGainTop =
-    selectedKnot.getBottom() + 1 - 2 * offset - 3 * 160._p;
+  auto const resize = [&](auto& c, int width) {
+    c.setTopLeftPosition(left, selectedKnot.getBottom() + offset);
+    c.setSize(width, 160._p);
+    left += width - 1;
+  };
 
-  int const outputGainTop = inputGainTop + offset + 160._p;
-  int const symmetryTop = outputGainTop + offset + 160._p;
+  resize(channelLabels, 50._p);
+  resize(symmetry, 140._p);
+  resize(gain[0], 140._p);
+  resize(gain[1], 140._p);
+  resize(wet, 140._p);
 
-  inputGainLabels.setTopLeftPosition(gainLeft, inputGainTop);
-  inputGainLabels.setSize(50._p, 160._p);
+  left = splineEditorSide + 2 * offset;
+  int top = splineEditorSide + 2 * offset;
+  int const width = (190._p) - 1;
 
-  gain[0].setTopLeftPosition(gainLeft + 50._p - 1, inputGainTop);
-  gain[0].setSize(140._p, 160._p);
-
-  outputGainLabels.setTopLeftPosition(gainLeft, outputGainTop);
-  outputGainLabels.setSize(50._p, 160._p);
-
-  gain[1].setTopLeftPosition(gainLeft + 50._p - 1, outputGainTop);
-  gain[1].setSize(140._p, 160._p);
-
-  symmetryLabels.setTopLeftPosition(gainLeft, symmetryTop);
-  symmetryLabels.setSize(50._p, 160._p);
-
-  symmetry.setTopLeftPosition(gainLeft + 50._p - 1, symmetryTop);
-  symmetry.setSize(140._p, 160._p);
-
-  Grid grid;
   using Track = Grid::TrackInfo;
 
-  grid.templateColumns = { Track(1_fr) };
+  midSide.getControl().setTopLeftPosition(left + 40._p, top);
+  midSide.getControl().setSize(100._p, 40._p);
 
-  grid.templateRows = { Track(Grid::Px(40._p)), Track(Grid::Px(40._p)),
-                        Track(Grid::Px(40._p)), Track(Grid::Px(40._p)),
-                        Track(Grid::Px(40._p)), Track(Grid::Px(40._p)) };
+  top += 80._p;
 
-  grid.items = { GridItem(midSide.getControl())
-                   .withWidth(120._p)
-                   .withHeight(30._p)
-                   .withAlignSelf(GridItem::AlignSelf::end)
-                   .withJustifySelf(GridItem::JustifySelf::center),
-                 GridItem(smoothingLabel)
-                   .withAlignSelf(GridItem::AlignSelf::start)
-                   .withJustifySelf(GridItem::JustifySelf::center),
-                 GridItem(smoothing.getControl())
-                   .withWidth(135._p)
-                   .withAlignSelf(GridItem::AlignSelf::start)
-                   .withJustifySelf(GridItem::JustifySelf::center),
-                 GridItem(oversamplingLabel),
-                 GridItem(oversampling.getControl())
-                   .withWidth(70)
-                   .withHeight(30._p)
-                   .withAlignSelf(GridItem::AlignSelf::center)
-                   .withJustifySelf(GridItem::JustifySelf::center),
-                 GridItem(linearPhase.getControl())
-                   .withWidth(120)
-                   .withAlignSelf(GridItem::AlignSelf::center)
-                   .withJustifySelf(GridItem::JustifySelf::center) };
+  {
+    Grid grid;
+    using Track = Grid::TrackInfo;
 
-  grid.justifyContent = Grid::JustifyContent::center;
-  grid.alignContent = Grid::AlignContent::center;
+    grid.templateColumns = { Track(1_fr) };
 
-  grid.performLayout(juce::Rectangle<int>(
-    splineEditorSide + 2 * offset, offset, (190._p) - 1, 240._p));
+    grid.templateRows = { Track(Grid::Px(40._p)), Track(Grid::Px(40._p)) };
+    grid.items = {
+      GridItem(smoothingLabel)
+        .withAlignSelf(GridItem::AlignSelf::start)
+        .withJustifySelf(GridItem::JustifySelf::center),
+      GridItem(smoothing.getControl())
+        .withWidth(135._p)
+        .withAlignSelf(GridItem::AlignSelf::start)
+        .withJustifySelf(GridItem::JustifySelf::center),
+    };
+
+    grid.performLayout(juce::Rectangle<int>(left, top, width, 80._p));
+  }
+
+  top += 130._p;
+
+  {
+    Grid grid;
+    using Track = Grid::TrackInfo;
+
+    grid.templateColumns = { Track(1_fr) };
+
+    grid.templateRows = { Track(Grid::Px(40._p)),
+                          Track(Grid::Px(40._p)),
+                          Track(Grid::Px(40._p)) };
+    grid.items = { GridItem(oversamplingLabel),
+                   GridItem(oversampling.getControl())
+                     .withWidth(70)
+                     .withHeight(30._p)
+                     .withAlignSelf(GridItem::AlignSelf::center)
+                     .withJustifySelf(GridItem::JustifySelf::center),
+                   GridItem(linearPhase.getControl())
+                     .withWidth(120)
+                     .withAlignSelf(GridItem::AlignSelf::center)
+                     .withJustifySelf(GridItem::JustifySelf::center) };
+
+    grid.performLayout(juce::Rectangle<int>(left, top, width, 120._p));
+  }
 
   url.setTopLeftPosition(10._p, getHeight() - 18._p);
   url.setSize(160._p, 16._p);

@@ -52,6 +52,8 @@ class OverdrawAudioProcessor : public AudioProcessor
 
     std::array<LinkableParameter<AudioParameterFloat>, 2> gain;
 
+    LinkableParameter<AudioParameterFloat> wet;
+
     std::unique_ptr<SplineParameters> spline;
 
     std::unique_ptr<AudioProcessorValueTreeState> apvts;
@@ -70,6 +72,9 @@ class OverdrawAudioProcessor : public AudioProcessor
   double automationTime = 50.0;
 
   double gain[2][2] = { { 1.0, 1.0 }, { 1.0, 1.0 } };
+  double wetAmount[2] = { 1.0, 1.0 };
+
+  ScalarBuffer<double> dryBuffer{ 2 };
 
   // buffer for single precision processing call
   AudioBuffer<double> floatToDouble;
