@@ -185,7 +185,8 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   oversampling.vecToVecDownsamplers[1]->processBlock(
     oversampling.scalarToVecUpsamplers[1]->getOutput(), 2, numSamples);
 
-  // wet
+  // dry-wet and output gain
+
   auto& wetOutput = oversampling.vecToVecDownsamplers[0]->getOutput();
   auto& dryOutput = oversampling.vecToVecDownsamplers[1]->getOutput();
 
@@ -202,7 +203,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     Vec2d outputGain = Vec2d().load(gain[1]);
     Vec2d outputGainTarget = Vec2d().load(gainTarget[1]);
 
-    for (int i = 0; i < numUpsampledSamples; ++i) {
+    for (int i = 0; i < numSamples; ++i) {
       amount = alpha * (amount - amountTarget) + amountTarget;
       outputGain = alpha * (outputGain - outputGainTarget) + outputGainTarget;
       Vec2d wet = outputGain * wetBuffer[i];
@@ -222,7 +223,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
       Vec2d outputGain = Vec2d().load(gain[1]);
       Vec2d outputGainTarget = Vec2d().load(gainTarget[1]);
 
-      for (int i = 0; i < numUpsampledSamples; ++i) {
+      for (int i = 0; i < numSamples; ++i) {
         outputGain = alpha * (outputGain - outputGainTarget) + outputGainTarget;
         wetBuffer[i] = outputGain * wetBuffer[i];
       }
@@ -237,6 +238,8 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
   else {
     wetOutput.deinterleave(ioAudio, 2, numSamples);
   }
+
+  // mid side
 
   if (isMidSideEnabled) {
     midSideToLeftRight(ioAudio, numSamples);
