@@ -62,9 +62,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
 
-  , vuMeter({ { &p.vuMeterResults[0], &p.vuMeterResults[1] } },
-            36.f,
-            [](float x) { return std::sqrt(x); })
+  , vuMeter({ { &p.vuMeterResults[0], &p.vuMeterResults[1] } }, 36.f)
 
   , background(ImageCache::getFromMemory(BinaryData::background_png,
                                          BinaryData::background_pngSize))
