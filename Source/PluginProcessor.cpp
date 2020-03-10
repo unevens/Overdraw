@@ -165,17 +165,17 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 void
 OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+  floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
+
+  dryBuffer.setNumSamples(samplesPerBlock);
+
   {
-    const std::lock_guard<std::mutex> lock(oversamplingMutex);
     if (oversamplingSettings.numSamplesPerBlock != samplesPerBlock) {
+      const std::lock_guard<std::mutex> lock(oversamplingMutex);
       oversamplingSettings.numSamplesPerBlock = samplesPerBlock;
       oversampling = std::make_unique<Oversampling>(oversamplingSettings);
     }
   }
-
-  floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
-
-  dryBuffer.setNumSamples(samplesPerBlock);
 
   reset();
 }
