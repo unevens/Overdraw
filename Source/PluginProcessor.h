@@ -24,7 +24,6 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
 #include "adsp/Spline.hpp"
-#include "oversimple/AsyncOversampling.hpp"
 #include <JuceHeader.h>
 
 #ifndef OVERDRAW_UI_SCALE
@@ -63,7 +62,6 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   Parameters parameters;
 
-  std::unique_ptr<OversamplingAttachments> oversamplingAttachments;
 
   // splines
 
@@ -84,9 +82,11 @@ class OverdrawAudioProcessor : public AudioProcessor
   // oversampling
   using Oversampling = oversimple::Oversampling<double>;
   using OversamplingSettings = oversimple::OversamplingSettings;
-  oversimple::AsyncOversampling asyncOversampling;
-  oversimple::OversamplingGetter<double>& oversamplingGetter;
-  oversimple::AsyncOversampling::Awaiter oversamplingAwaiter;
+
+  OversamplingSettings oversamplingSettings;
+  std::unique_ptr<Oversampling> oversampling;
+  std::mutex oversamplingMutex;
+  OversamplingAttachments<double> oversamplingAttachments;
 
 public:
   static constexpr int maxNumKnots = 15;

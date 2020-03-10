@@ -79,11 +79,6 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   double* ioAudio[2] = { buffer.getWritePointer(0), buffer.getWritePointer(1) };
 
-  // get the oversampling processors
-
-  oversamplingGetter.update();
-  auto& oversampling = oversamplingGetter.get();
-
   bool const isMidSideEnabled = parameters.midSide->get();
 
   auto [spline, splineAutomator] = parameters.spline->updateSpline(splines);
@@ -97,7 +92,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
       ? 0.0
       : exp(-MathConstants<double>::twoPi * invSampleRate / smoothingTime);
 
-  double const invUpsampledSampleRate = invSampleRate / oversampling.getRate();
+  double const invUpsampledSampleRate = invSampleRate / oversampling->getRate();
 
   double const upsampledAutomationAlpha =
     smoothingTime == 0.0 ? 0.0
@@ -160,12 +155,13 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // oversampling
 
-  oversampling.prepareBuffers(numSamples); // extra safety measure
+  oversampling->prepareBuffers(numSamples); // extra safety measure
 
   int const numUpsampledSamples =
-    oversampling.scalarToVecUpsamplers[0]->processBlock(ioAudio, 2, numSamples);
+    oversampling->scalarToVecUpsamplers[0]->processBlock(
+      ioAudio, 2, numSamples);
 
-  oversampling.scalarToVecUpsamplers[1]->processBlock(
+  oversampling->scalarToVecUpsamplers[1]->processBlock(
     dryBuffer.get(), 2, numSamples);
 
   if (numUpsampledSamples == 0) {
@@ -175,7 +171,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     return;
   }
 
-  auto& upsampledBuffer = oversampling.scalarToVecUpsamplers[0]->getOutput();
+  auto& upsampledBuffer = oversampling->scalarToVecUpsamplers[0]->getOutput();
   auto& upsampledIo = upsampledBuffer.getBuffer2(0);
 
   // waveshaping
@@ -186,19 +182,19 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // downsampling
 
-  oversampling.vecToVecDownsamplers[0]->processBlock(
+  oversampling->vecToVecDownsamplers[0]->processBlock(
     upsampledBuffer, 2, numUpsampledSamples, numSamples);
 
-  oversampling.vecToVecDownsamplers[1]->processBlock(
-    oversampling.scalarToVecUpsamplers[1]->getOutput(),
+  oversampling->vecToVecDownsamplers[1]->processBlock(
+    oversampling->scalarToVecUpsamplers[1]->getOutput(),
     2,
     numUpsampledSamples,
     numSamples);
 
   // dry-wet, output gain and vu meter
 
-  auto& wetOutput = oversampling.vecToVecDownsamplers[0]->getOutput();
-  auto& dryOutput = oversampling.vecToVecDownsamplers[1]->getOutput();
+  auto& wetOutput = oversampling->vecToVecDownsamplers[0]->getOutput();
+  auto& dryOutput = oversampling->vecToVecDownsamplers[1]->getOutput();
 
   constexpr double vuMeterFrequency = 10.0;
 

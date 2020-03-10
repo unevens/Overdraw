@@ -135,49 +135,49 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , splines(adsp::SplineHolder<Vec2d>::make<maxNumKnots>(true))
 
-  , asyncOversampling([this] {
-    auto oversampling = OversamplingSettings{};
-    oversampling.numScalarToVecUpsamplers = 2;
-    oversampling.numVecToVecDownsamplers = 2;
-    oversampling.numChannels = 2;
-    oversampling.updateLatency = [this](int latency) {
+  , oversamplingSettings([this] {
+    auto oversamplingSettings = OversamplingSettings{};
+    oversamplingSettings.numScalarToVecUpsamplers = 2;
+    oversamplingSettings.numVecToVecDownsamplers = 2;
+    oversamplingSettings.numChannels = 2;
+    oversamplingSettings.updateLatency = [this](int latency) {
       setLatencySamples(latency);
     };
-    return oversampling;
+    return oversamplingSettings;
   }())
 
-  , oversamplingGetter(
-      *oversimple::requestOversamplingGetter<double>(asyncOversampling))
+  , oversampling(std::make_unique<Oversampling>(oversamplingSettings))
 
-  , oversamplingAwaiter(asyncOversampling.requestAwaiter())
-
+  , oversamplingAttachments(parameters.oversampling,
+                            *parameters.apvts,
+                            this,
+                            &oversampling,
+                            &oversamplingSettings,
+                            &oversamplingMutex)
 {
-  oversamplingAttachments = std::make_unique<OversamplingAttachments>(
-    *parameters.apvts, asyncOversampling, parameters.oversampling);
-
   looks.simpleFontSize *= uiGlobalScaleFactor;
   looks.simpleSliderLabelFontSize *= uiGlobalScaleFactor;
   looks.simpleRotarySliderOffset *= uiGlobalScaleFactor;
 
   LookAndFeel::setDefaultLookAndFeel(&looks);
-
-  asyncOversampling.startTimer();
 }
 
 void
 OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-  asyncOversampling.submitMessage([=](OversamplingSettings& oversampling) {
-    oversampling.numSamplesPerBlock = samplesPerBlock;
-  });
+  {
+    const std::lock_guard<std::mutex> lock(oversamplingMutex);
+    if (oversamplingSettings.numSamplesPerBlock != samplesPerBlock) {
+      oversamplingSettings.numSamplesPerBlock = samplesPerBlock;
+      oversampling = std::make_unique<Oversampling>(oversamplingSettings);
+    }
+  }
 
   floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
 
   dryBuffer.setNumSamples(samplesPerBlock);
 
   reset();
-
-  oversamplingAwaiter.await();
 }
 
 void
