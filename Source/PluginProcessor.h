@@ -62,7 +62,6 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   Parameters parameters;
 
-
   // splines
 
   adsp::SplineHolder<Vec2d> splines;
@@ -85,8 +84,8 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   OversamplingSettings oversamplingSettings;
   std::unique_ptr<Oversampling> oversampling;
-  std::mutex oversamplingMutex;
-  OversamplingAttachments<double> oversamplingAttachments;
+  std::recursive_mutex oversamplingMutex;
+  OversamplingAttachments<double, std::recursive_mutex> oversamplingAttachments;
 
 public:
   static constexpr int maxNumKnots = 15;

@@ -165,7 +165,7 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
   dryBuffer.setNumSamples(samplesPerBlock);
 
   if (oversamplingSettings.numSamplesPerBlock != samplesPerBlock) {
-    const std::lock_guard<std::mutex> lock(oversamplingMutex);
+    auto const guard = std::lock_guard<std::recursive_mutex>(oversamplingMutex);
     oversamplingSettings.numSamplesPerBlock = samplesPerBlock;
     oversampling = std::make_unique<Oversampling>(oversamplingSettings);
   }
