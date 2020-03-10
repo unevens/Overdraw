@@ -23,35 +23,32 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 OverdrawAudioProcessor::Parameters::Parameters(
   OverdrawAudioProcessor& processor)
 {
-  std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
+  AudioProcessorValueTreeState::ParameterLayout layout;
 
   auto const createFloatParameter =
     [&](String name, float value, float min, float max, float step = 0.01f) {
-      parameters.push_back(std::unique_ptr<RangedAudioParameter>(
-        new AudioParameterFloat(name, name, { min, max, step }, value)));
-
-      return static_cast<AudioParameterFloat*>(parameters.back().get());
+      auto p = new AudioParameterFloat(name, name, { min, max, step }, value);
+      layout.add(std::unique_ptr<RangedAudioParameter>(p));
+      return static_cast<AudioParameterFloat*>(p);
     };
 
   auto const createWrappedBoolParameter = [&](String name, float value) {
     WrappedBoolParameter wrapper;
-    parameters.push_back(wrapper.createParameter(name, value));
+    layout.add(wrapper.createParameter(name, value));
     return wrapper;
   };
 
   auto const createBoolParameter = [&](String name, float value) {
-    parameters.push_back(std::unique_ptr<RangedAudioParameter>(
-      new AudioParameterBool(name, name, value)));
-
-    return static_cast<AudioParameterBool*>(parameters.back().get());
+    auto p = new AudioParameterBool(name, name, value);
+    layout.add(std::unique_ptr<RangedAudioParameter>(p));
+    return static_cast<AudioParameterBool*>(p);
   };
 
   auto const createChoiceParameter =
     [&](String name, StringArray choices, int defaultIndex = 0) {
-      parameters.push_back(std::unique_ptr<RangedAudioParameter>(
-        new AudioParameterChoice(name, name, choices, defaultIndex)));
-
-      return static_cast<AudioParameterChoice*>(parameters.back().get());
+      auto p = new AudioParameterChoice(name, name, choices, defaultIndex);
+      layout.add(std::unique_ptr<RangedAudioParameter>(p));
+      return static_cast<AudioParameterChoice*>(p);
     };
 
   String const ch0Suffix = "_ch0";
@@ -109,7 +106,7 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   spline = std::unique_ptr<SplineParameters>(
     new SplineParameters("",
-                         parameters,
+                         layout,
                          OverdrawAudioProcessor::maxNumKnots,
                          { -2.f, 2.f, 0.0001f },
                          { -2.f, 2.f, 0.0001f },
@@ -117,10 +114,8 @@ OverdrawAudioProcessor::Parameters::Parameters(
                          isKnotActive));
 
   apvts = std::unique_ptr<AudioProcessorValueTreeState>(
-    new AudioProcessorValueTreeState(processor,
-                                     nullptr,
-                                     "OVERDRAW-PARAMETERS",
-                                     { parameters.begin(), parameters.end() }));
+    new AudioProcessorValueTreeState(
+      processor, nullptr, "OVERDRAW-PARAMETERS", std::move(layout)));
 }
 
 OverdrawAudioProcessor::OverdrawAudioProcessor()
