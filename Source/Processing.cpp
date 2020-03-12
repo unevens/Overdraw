@@ -80,7 +80,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   bool const isMidSideEnabled = parameters.midSide->get();
 
-  auto [spline, splineAutomator] = parameters.spline->updateSpline(splines);
+  int numActiveKnots = parameters.spline->updateSpline(*spline);
 
   double const smoothingTime = 0.001 * parameters.smoothingTime->get();
 
@@ -98,9 +98,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
                          : exp(-MathConstants<double>::twoPi *
                                invUpsampledSampleRate / smoothingTime);
 
-  if (splineAutomator) {
-    splineAutomator->setSmoothingAlpha(upsampledAutomationAlpha);
-  }
+  spline->setSmoothingAlpha(upsampledAutomationAlpha);
 
   double gainTarget[2][2];
   double wetAmountTarget[2];
@@ -113,10 +111,8 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
       gainTarget[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
     }
 
-    if (spline) {
-      spline->setIsSymmetric(parameters.symmetry.get(c)->getValue() ? 1.0 : 0.0,
-                             c);
-    }
+    spline->spline.setIsSymmetric(
+      parameters.symmetry.get(c)->getValue() ? 1.0 : 0.0, c);
   }
 
   bool const isWetPassNeeded = [&] {
@@ -175,8 +171,9 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // waveshaping
 
-  if (spline && !isBypassing) {
-    spline->processBlock(upsampledIo, upsampledIo, splineAutomator);
+  if (!isBypassing) {
+    splineDispatcher.processBlock(
+      *spline, upsampledIo, upsampledIo, numActiveKnots);
   }
 
   // downsampling

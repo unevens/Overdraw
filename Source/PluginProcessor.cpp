@@ -128,7 +128,7 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , parameters(*this)
 
-  , splines(adsp::SplineHolder<Vec2d>::make<maxNumKnots>(true))
+  , spline(avec::Aligned<Spline>::make())
 
   , oversamplingSettings([this] {
     auto oversamplingSettings = OversamplingSettings{};
@@ -176,8 +176,8 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 void
 OverdrawAudioProcessor::reset()
 {
-  parameters.spline->updateSpline(splines);
-  splines.reset();
+  parameters.spline->updateSpline(*spline);
+  spline->reset();
 
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;

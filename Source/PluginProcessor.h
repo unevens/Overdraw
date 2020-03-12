@@ -39,6 +39,10 @@ constexpr static long double operator"" _p(long double px)
 
 class OverdrawAudioProcessor : public AudioProcessor
 {
+public:
+  static constexpr int maxNumKnots = 15;
+
+private:
   struct Parameters
   {
     AudioParameterBool* midSide;
@@ -62,9 +66,11 @@ class OverdrawAudioProcessor : public AudioProcessor
 
   Parameters parameters;
 
-  // splines
+  using Spline = adsp::AutoSpline<Vec2d, maxNumKnots>;
 
-  adsp::SplineHolder<Vec2d> splines;
+  aligned_ptr<Spline> spline;
+
+  adsp::SplineDispatcher<adsp::AutoSpline, Vec2d, maxNumKnots> splineDispatcher;
 
   double automationTime = 50.0;
 
@@ -88,8 +94,6 @@ class OverdrawAudioProcessor : public AudioProcessor
   OversamplingAttachments<double, std::recursive_mutex> oversamplingAttachments;
 
 public:
-  static constexpr int maxNumKnots = 15;
-
   // for gui
   SimpleLookAndFeel looks;
   std::array<std::atomic<float>, 2> vuMeterResults;
