@@ -284,6 +284,6 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // update vu meter
 
-  vuMeterResults[0] = vuMeterBufferDB[0];
-  vuMeterResults[1] = vuMeterBufferDB[1];
+  vuMeterResults[0] = (float)vuMeterBufferDB[0];
+  vuMeterResults[1] = (float)vuMeterBufferDB[1];
 }
