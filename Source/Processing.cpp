@@ -112,7 +112,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
     }
 
     spline->spline.setIsSymmetric(
-      parameters.symmetry.get(c)->getValue() ? 1.0 : 0.0, c);
+      c, parameters.symmetry.get(c)->getValue() ? 1.0 : 0.0);
   }
 
   bool const isWetPassNeeded = [&] {
