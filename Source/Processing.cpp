@@ -98,7 +98,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
                          : exp(-MathConstants<double>::twoPi *
                                invUpsampledSampleRate / smoothingTime);
 
-  spline->setSmoothingAlpha(upsampledAutomationAlpha);
+  spline->automator.setSmoothingAlpha(upsampledAutomationAlpha);
 
   double gainTarget[2][2];
   double wetAmountTarget[2];

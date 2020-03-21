@@ -70,7 +70,7 @@ private:
 
   aligned_ptr<Spline> spline;
 
-  adsp::SplineDispatcher<adsp::AutoSpline, Vec2d, maxNumKnots> splineDispatcher;
+  adsp::AutoSplineDispatcher<Vec2d, maxNumKnots> splineDispatcher;
 
   double automationTime = 50.0;
 
