@@ -160,7 +160,7 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 void
 OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-  floatToDouble = AudioBuffer<double>(4, samplesPerBlock);
+  floatToDouble = AudioBuffer<double>(2, samplesPerBlock);
 
   dryBuffer.setNumSamples(samplesPerBlock);
 
@@ -209,23 +209,22 @@ void
 OverdrawAudioProcessor::processBlock(AudioBuffer<float>& buffer,
                                      MidiBuffer& midiMessages)
 {
-  auto totalNumInputChannels = getTotalNumInputChannels();
+  auto const totalNumInputChannels = getTotalNumInputChannels();
+  auto const numSamples = buffer.getNumSamples();
+
+  floatToDouble.setSize(2, numSamples, false, false, true);
 
   for (int c = 0; c < totalNumInputChannels; ++c) {
     std::copy(buffer.getReadPointer(c),
-              buffer.getReadPointer(c) + buffer.getNumSamples(),
+              buffer.getReadPointer(c) + numSamples,
               floatToDouble.getWritePointer(c));
-  }
-
-  for (int c = totalNumInputChannels; c < 4; ++c) {
-    floatToDouble.clear(c, 0, floatToDouble.getNumSamples());
   }
 
   processBlock(floatToDouble, midiMessages);
 
   for (int c = 0; c < totalNumInputChannels; ++c) {
     std::copy(floatToDouble.getReadPointer(c),
-              floatToDouble.getReadPointer(c) + floatToDouble.getNumSamples(),
+              floatToDouble.getReadPointer(c) + numSamples,
               buffer.getWritePointer(c));
   }
 }
