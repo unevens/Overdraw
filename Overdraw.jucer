@@ -6,7 +6,7 @@
               companyWebsite="www.unevens.net" companyEmail="hi@unevens.net"
               headerPath="../../audio-dsp&#10;../../oversimple&#10;../../oversimple/avec&#10;../../oversimple/avec/vectorclass&#10;../../oversimple/r8brain&#10;../../juicy&#10;$(BOOST_INCLUDEDIR)&#10;"
               defines="R8B_PFFFT_DOUBLE=1&#10;NOMINMAX=1" pluginCode="Odrw"
-              pluginManufacturerCode="UnEv" version="1.1.0">
+              pluginManufacturerCode="UnEv" version="1.1.1">
   <MAINGROUP id="Ayh0pr" name="Overdraw">
     <GROUP id="{215C9066-A75F-F5CA-873A-FAAC46F3DE3D}" name="audio-dsp">
       <FILE id="j34xY5" name="Spline.hpp" compile="0" resource="0" file="audio-dsp/adsp/Spline.hpp"/>
@@ -106,139 +106,254 @@
         <FILE id="GuzbDV" name="VecView.hpp" compile="0" resource="0" file="oversimple/avec/avec/VecView.hpp"/>
       </GROUP>
       <GROUP id="{E2F8119C-5FB4-6460-FB26-B4E6F59BB5BC}" name="hiir">
-        <FILE id="LCJQis" name="def.h" compile="0" resource="0" file="oversimple/hiir/def.h"/>
-        <FILE id="IJSmPA" name="Downsampler2x2SseDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/Downsampler2x2SseDouble.h"/>
-        <FILE id="Xq1FsK" name="Downsampler2x2SseDouble.hpp" compile="0" resource="0"
-              file="oversimple/hiir/Downsampler2x2SseDouble.hpp"/>
-        <FILE id="HDymHZ" name="Downsampler2x3dnow.h" compile="0" resource="0"
+        <FILE id="IBDop3" name="def.h" compile="0" resource="0" file="oversimple/hiir/def.h"/>
+        <FILE id="gjNJnf" name="Downsampler2x2F64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x2F64Sse2.h"/>
+        <FILE id="yGc6CQ" name="Downsampler2x2F64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x2F64Sse2.hpp"/>
+        <FILE id="QRgYHv" name="Downsampler2x3dnow.h" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x3dnow.h"/>
-        <FILE id="oK7RA4" name="Downsampler2x3dnow.hpp" compile="0" resource="0"
+        <FILE id="VUi7NH" name="Downsampler2x3dnow.hpp" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x3dnow.hpp"/>
-        <FILE id="Ckt2rT" name="Downsampler2x4AvxDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/Downsampler2x4AvxDouble.h"/>
-        <FILE id="QhoQ9J" name="Downsampler2x4AvxDouble.hpp" compile="0" resource="0"
-              file="oversimple/hiir/Downsampler2x4AvxDouble.hpp"/>
-        <FILE id="UHX1Ft" name="Downsampler2x4Neon.h" compile="0" resource="0"
+        <FILE id="UtOlA1" name="Downsampler2x4F64Avx.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x4F64Avx.h"/>
+        <FILE id="GhllDo" name="Downsampler2x4F64Avx.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x4F64Avx.hpp"/>
+        <FILE id="JEWrCt" name="Downsampler2x4Neon.h" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x4Neon.h"/>
-        <FILE id="Y6GsxC" name="Downsampler2x4Neon.hpp" compile="0" resource="0"
+        <FILE id="VhuTCo" name="Downsampler2x4Neon.hpp" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x4Neon.hpp"/>
-        <FILE id="hFvhPb" name="Downsampler2x4Sse.h" compile="0" resource="0"
+        <FILE id="wVStIC" name="Downsampler2x4Sse.h" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x4Sse.h"/>
-        <FILE id="aTIv2F" name="Downsampler2x4Sse.hpp" compile="0" resource="0"
+        <FILE id="HGJzvF" name="Downsampler2x4Sse.hpp" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x4Sse.hpp"/>
-        <FILE id="xJCIb9" name="Downsampler2x8Avx.h" compile="0" resource="0"
+        <FILE id="PXRZnJ" name="Downsampler2x8Avx.h" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x8Avx.h"/>
-        <FILE id="IKuYt5" name="Downsampler2x8Avx.hpp" compile="0" resource="0"
+        <FILE id="de2Xwu" name="Downsampler2x8Avx.hpp" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2x8Avx.hpp"/>
-        <FILE id="HHEBW4" name="Downsampler2xFpu.h" compile="0" resource="0"
+        <FILE id="VaqLIJ" name="Downsampler2x8F64Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x8F64Avx512.h"/>
+        <FILE id="wUHNES" name="Downsampler2x8F64Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x8F64Avx512.hpp"/>
+        <FILE id="HIq0HZ" name="Downsampler2x16Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x16Avx512.h"/>
+        <FILE id="LORrt1" name="Downsampler2x16Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2x16Avx512.hpp"/>
+        <FILE id="y1kYGn" name="Downsampler2xF64Fpu.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xF64Fpu.h"/>
+        <FILE id="M94VGB" name="Downsampler2xF64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xF64Sse2.h"/>
+        <FILE id="GhifdT" name="Downsampler2xF64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xF64Sse2.hpp"/>
+        <FILE id="qPH0G6" name="Downsampler2xFpu.h" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2xFpu.h"/>
-        <FILE id="YxOOTG" name="Downsampler2xFpu.hpp" compile="0" resource="0"
-              file="oversimple/hiir/Downsampler2xFpu.hpp"/>
-        <FILE id="KYVlsv" name="Downsampler2xNeon.h" compile="0" resource="0"
+        <FILE id="uIdIAG" name="Downsampler2xFpuTpl.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xFpuTpl.h"/>
+        <FILE id="qA8RUy" name="Downsampler2xFpuTpl.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xFpuTpl.hpp"/>
+        <FILE id="Eum7qx" name="Downsampler2xNeon.h" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2xNeon.h"/>
-        <FILE id="XuiqWJ" name="Downsampler2xNeon.hpp" compile="0" resource="0"
+        <FILE id="gkEhHa" name="Downsampler2xNeon.hpp" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2xNeon.hpp"/>
-        <FILE id="aviXhA" name="Downsampler2xSse.h" compile="0" resource="0"
+        <FILE id="xe9tf6" name="Downsampler2xNeonOld.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xNeonOld.h"/>
+        <FILE id="Bz3CPL" name="Downsampler2xNeonOld.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xNeonOld.hpp"/>
+        <FILE id="GerlWS" name="Downsampler2xSse.h" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2xSse.h"/>
-        <FILE id="hETI9s" name="Downsampler2xSse.hpp" compile="0" resource="0"
+        <FILE id="PQr8uV" name="Downsampler2xSse.hpp" compile="0" resource="0"
               file="oversimple/hiir/Downsampler2xSse.hpp"/>
-        <FILE id="LhWXfw" name="fnc.h" compile="0" resource="0" file="oversimple/hiir/fnc.h"/>
-        <FILE id="K9uzZ2" name="fnc.hpp" compile="0" resource="0" file="oversimple/hiir/fnc.hpp"/>
-        <FILE id="V7fuuo" name="PhaseHalfPi3dnow.h" compile="0" resource="0"
+        <FILE id="gxkkTx" name="Downsampler2xSseOld.h" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xSseOld.h"/>
+        <FILE id="Rb4uny" name="Downsampler2xSseOld.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Downsampler2xSseOld.hpp"/>
+        <FILE id="DmeqgA" name="fnc.h" compile="0" resource="0" file="oversimple/hiir/fnc.h"/>
+        <FILE id="ySeFkf" name="fnc.hpp" compile="0" resource="0" file="oversimple/hiir/fnc.hpp"/>
+        <FILE id="Yn37Bf" name="fnc_neon.h" compile="0" resource="0" file="oversimple/hiir/fnc_neon.h"/>
+        <FILE id="qfZntx" name="fnc_neon.hpp" compile="0" resource="0" file="oversimple/hiir/fnc_neon.hpp"/>
+        <FILE id="Uv7JUa" name="PhaseHalfPi2F64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi2F64Sse2.h"/>
+        <FILE id="JHVrWb" name="PhaseHalfPi2F64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi2F64Sse2.hpp"/>
+        <FILE id="Waike7" name="PhaseHalfPi3dnow.h" compile="0" resource="0"
               file="oversimple/hiir/PhaseHalfPi3dnow.h"/>
-        <FILE id="CGum2w" name="PhaseHalfPi3dnow.hpp" compile="0" resource="0"
+        <FILE id="NCFlUF" name="PhaseHalfPi3dnow.hpp" compile="0" resource="0"
               file="oversimple/hiir/PhaseHalfPi3dnow.hpp"/>
-        <FILE id="pF6wX0" name="PhaseHalfPiFpu.h" compile="0" resource="0"
+        <FILE id="EtmGc2" name="PhaseHalfPi4F64Avx.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi4F64Avx.h"/>
+        <FILE id="uzTcON" name="PhaseHalfPi4F64Avx.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi4F64Avx.hpp"/>
+        <FILE id="WbyAWs" name="PhaseHalfPi4Neon.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi4Neon.h"/>
+        <FILE id="eLG1J3" name="PhaseHalfPi4Neon.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi4Neon.hpp"/>
+        <FILE id="Ivf8ey" name="PhaseHalfPi4Sse.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi4Sse.h"/>
+        <FILE id="Lk4kwM" name="PhaseHalfPi4Sse.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi4Sse.hpp"/>
+        <FILE id="HOP1sX" name="PhaseHalfPi8Avx.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi8Avx.h"/>
+        <FILE id="OJW4lb" name="PhaseHalfPi8Avx.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi8Avx.hpp"/>
+        <FILE id="xISJ3Q" name="PhaseHalfPi8F64Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi8F64Avx512.h"/>
+        <FILE id="axdL0E" name="PhaseHalfPi8F64Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi8F64Avx512.hpp"/>
+        <FILE id="tNkbW6" name="PhaseHalfPi16Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi16Avx512.h"/>
+        <FILE id="TXYNEW" name="PhaseHalfPi16Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPi16Avx512.hpp"/>
+        <FILE id="suqidX" name="PhaseHalfPiF64Fpu.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPiF64Fpu.h"/>
+        <FILE id="Squ1MA" name="PhaseHalfPiF64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPiF64Sse2.h"/>
+        <FILE id="ksAlug" name="PhaseHalfPiF64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPiF64Sse2.hpp"/>
+        <FILE id="eZ2wLY" name="PhaseHalfPiFpu.h" compile="0" resource="0"
               file="oversimple/hiir/PhaseHalfPiFpu.h"/>
-        <FILE id="XYiHAB" name="PhaseHalfPiFpu.hpp" compile="0" resource="0"
-              file="oversimple/hiir/PhaseHalfPiFpu.hpp"/>
-        <FILE id="v8eGU8" name="PhaseHalfPiNeon.h" compile="0" resource="0"
+        <FILE id="CYyCK4" name="PhaseHalfPiFpuTpl.h" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPiFpuTpl.h"/>
+        <FILE id="tsquia" name="PhaseHalfPiFpuTpl.hpp" compile="0" resource="0"
+              file="oversimple/hiir/PhaseHalfPiFpuTpl.hpp"/>
+        <FILE id="UzajTl" name="PhaseHalfPiNeon.h" compile="0" resource="0"
               file="oversimple/hiir/PhaseHalfPiNeon.h"/>
-        <FILE id="XiGjjU" name="PhaseHalfPiNeon.hpp" compile="0" resource="0"
+        <FILE id="x3XShv" name="PhaseHalfPiNeon.hpp" compile="0" resource="0"
               file="oversimple/hiir/PhaseHalfPiNeon.hpp"/>
-        <FILE id="aFuyxF" name="PhaseHalfPiSse.h" compile="0" resource="0"
+        <FILE id="TQVRl6" name="PhaseHalfPiSse.h" compile="0" resource="0"
               file="oversimple/hiir/PhaseHalfPiSse.h"/>
-        <FILE id="A4gqUn" name="PhaseHalfPiSse.hpp" compile="0" resource="0"
+        <FILE id="n2SWjQ" name="PhaseHalfPiSse.hpp" compile="0" resource="0"
               file="oversimple/hiir/PhaseHalfPiSse.hpp"/>
-        <FILE id="QsDdQE" name="PolyphaseIir2Designer.h" compile="0" resource="0"
+        <FILE id="noEM3m" name="PolyphaseIir2Designer.h" compile="0" resource="0"
               file="oversimple/hiir/PolyphaseIir2Designer.h"/>
-        <FILE id="CGEZhG" name="StageData3dnow.h" compile="0" resource="0"
+        <FILE id="ZkI16J" name="StageData3dnow.h" compile="0" resource="0"
               file="oversimple/hiir/StageData3dnow.h"/>
-        <FILE id="SyA7le" name="StageDataAvx.h" compile="0" resource="0" file="oversimple/hiir/StageDataAvx.h"/>
-        <FILE id="SGD6VP" name="StageDataAvxDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/StageDataAvxDouble.h"/>
-        <FILE id="WsjS1e" name="StageDataNeon.h" compile="0" resource="0" file="oversimple/hiir/StageDataNeon.h"/>
-        <FILE id="VOnUgP" name="StageDataSse.h" compile="0" resource="0" file="oversimple/hiir/StageDataSse.h"/>
-        <FILE id="tLSfo6" name="StageDataSseDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/StageDataSseDouble.h"/>
-        <FILE id="syt9p9" name="StageProc2SseDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/StageProc2SseDouble.h"/>
-        <FILE id="rS5h0C" name="StageProc2SseDouble.hpp" compile="0" resource="0"
-              file="oversimple/hiir/StageProc2SseDouble.hpp"/>
-        <FILE id="Pkbn5y" name="StageProc3dnow.h" compile="0" resource="0"
+        <FILE id="yPMYdS" name="StageDataAvx.h" compile="0" resource="0" file="oversimple/hiir/StageDataAvx.h"/>
+        <FILE id="u1PAsh" name="StageDataAvx512.h" compile="0" resource="0"
+              file="oversimple/hiir/StageDataAvx512.h"/>
+        <FILE id="anpA4L" name="StageDataF64Avx.h" compile="0" resource="0"
+              file="oversimple/hiir/StageDataF64Avx.h"/>
+        <FILE id="nIbmlP" name="StageDataF64Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/StageDataF64Avx512.h"/>
+        <FILE id="PNqAaV" name="StageDataF64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/StageDataF64Sse2.h"/>
+        <FILE id="mVt2pP" name="StageDataNeonV2.h" compile="0" resource="0"
+              file="oversimple/hiir/StageDataNeonV2.h"/>
+        <FILE id="s5lkju" name="StageDataNeonV4.h" compile="0" resource="0"
+              file="oversimple/hiir/StageDataNeonV4.h"/>
+        <FILE id="TfZWfy" name="StageDataSse.h" compile="0" resource="0" file="oversimple/hiir/StageDataSse.h"/>
+        <FILE id="AC7Nm9" name="StageProc2F64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProc2F64Sse2.h"/>
+        <FILE id="ioBhG8" name="StageProc2F64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProc2F64Sse2.hpp"/>
+        <FILE id="mu6YLv" name="StageProc3dnow.h" compile="0" resource="0"
               file="oversimple/hiir/StageProc3dnow.h"/>
-        <FILE id="m1iTqB" name="StageProc3dnow.hpp" compile="0" resource="0"
+        <FILE id="P74EkS" name="StageProc3dnow.hpp" compile="0" resource="0"
               file="oversimple/hiir/StageProc3dnow.hpp"/>
-        <FILE id="eYtsqa" name="StageProc4AvxDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/StageProc4AvxDouble.h"/>
-        <FILE id="JtLaJA" name="StageProc4AvxDouble.hpp" compile="0" resource="0"
-              file="oversimple/hiir/StageProc4AvxDouble.hpp"/>
-        <FILE id="RKg6Ax" name="StageProc4Neon.h" compile="0" resource="0"
+        <FILE id="Ii6lMC" name="StageProc4F64Avx.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProc4F64Avx.h"/>
+        <FILE id="cnWNfy" name="StageProc4F64Avx.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProc4F64Avx.hpp"/>
+        <FILE id="y6cPcj" name="StageProc4Neon.h" compile="0" resource="0"
               file="oversimple/hiir/StageProc4Neon.h"/>
-        <FILE id="saSjPj" name="StageProc4Neon.hpp" compile="0" resource="0"
+        <FILE id="yqtEvU" name="StageProc4Neon.hpp" compile="0" resource="0"
               file="oversimple/hiir/StageProc4Neon.hpp"/>
-        <FILE id="HMs17Q" name="StageProc4Sse.h" compile="0" resource="0" file="oversimple/hiir/StageProc4Sse.h"/>
-        <FILE id="Txvyz5" name="StageProc4Sse.hpp" compile="0" resource="0"
+        <FILE id="wHxHNB" name="StageProc4Sse.h" compile="0" resource="0" file="oversimple/hiir/StageProc4Sse.h"/>
+        <FILE id="Cv39Ck" name="StageProc4Sse.hpp" compile="0" resource="0"
               file="oversimple/hiir/StageProc4Sse.hpp"/>
-        <FILE id="H5qTK5" name="StageProc8Avx.h" compile="0" resource="0" file="oversimple/hiir/StageProc8Avx.h"/>
-        <FILE id="z7HpQL" name="StageProc8Avx.hpp" compile="0" resource="0"
+        <FILE id="utVHBP" name="StageProc8Avx.h" compile="0" resource="0" file="oversimple/hiir/StageProc8Avx.h"/>
+        <FILE id="TGHpYv" name="StageProc8Avx.hpp" compile="0" resource="0"
               file="oversimple/hiir/StageProc8Avx.hpp"/>
-        <FILE id="S7g1fY" name="StageProcFpu.h" compile="0" resource="0" file="oversimple/hiir/StageProcFpu.h"/>
-        <FILE id="gkblal" name="StageProcFpu.hpp" compile="0" resource="0"
+        <FILE id="jKlIHK" name="StageProc8F64Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProc8F64Avx512.h"/>
+        <FILE id="BVdKmk" name="StageProc8F64Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProc8F64Avx512.hpp"/>
+        <FILE id="ut07LX" name="StageProc16Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProc16Avx512.h"/>
+        <FILE id="xOjKYW" name="StageProc16Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProc16Avx512.hpp"/>
+        <FILE id="kOzyaf" name="StageProcF64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProcF64Sse2.h"/>
+        <FILE id="jqEcLz" name="StageProcF64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProcF64Sse2.hpp"/>
+        <FILE id="uIMSgy" name="StageProcFpu.h" compile="0" resource="0" file="oversimple/hiir/StageProcFpu.h"/>
+        <FILE id="Y4E7f8" name="StageProcFpu.hpp" compile="0" resource="0"
               file="oversimple/hiir/StageProcFpu.hpp"/>
-        <FILE id="PpkZfz" name="StageProcNeon.h" compile="0" resource="0" file="oversimple/hiir/StageProcNeon.h"/>
-        <FILE id="rPkHqp" name="StageProcNeon.hpp" compile="0" resource="0"
-              file="oversimple/hiir/StageProcNeon.hpp"/>
-        <FILE id="oSvTbT" name="StageProcSse.h" compile="0" resource="0" file="oversimple/hiir/StageProcSse.h"/>
-        <FILE id="u8gMay" name="StageProcSse.hpp" compile="0" resource="0"
-              file="oversimple/hiir/StageProcSse.hpp"/>
-        <FILE id="LMa4Uk" name="Upsampler2x2SseDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/Upsampler2x2SseDouble.h"/>
-        <FILE id="mWMctN" name="Upsampler2x2SseDouble.hpp" compile="0" resource="0"
-              file="oversimple/hiir/Upsampler2x2SseDouble.hpp"/>
-        <FILE id="tJde4z" name="Upsampler2x3dnow.h" compile="0" resource="0"
+        <FILE id="nfTArG" name="StageProcNeonV2.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProcNeonV2.h"/>
+        <FILE id="Qkz4SR" name="StageProcNeonV2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProcNeonV2.hpp"/>
+        <FILE id="SG98Pa" name="StageProcNeonV4.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProcNeonV4.h"/>
+        <FILE id="x72LxC" name="StageProcNeonV4.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProcNeonV4.hpp"/>
+        <FILE id="CpVqzK" name="StageProcSseV2.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProcSseV2.h"/>
+        <FILE id="WT5Iox" name="StageProcSseV2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProcSseV2.hpp"/>
+        <FILE id="yF6OHX" name="StageProcSseV4.h" compile="0" resource="0"
+              file="oversimple/hiir/StageProcSseV4.h"/>
+        <FILE id="rKHy3i" name="StageProcSseV4.hpp" compile="0" resource="0"
+              file="oversimple/hiir/StageProcSseV4.hpp"/>
+        <FILE id="cYGC4W" name="Upsampler2x2F64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x2F64Sse2.h"/>
+        <FILE id="e4Cr7i" name="Upsampler2x2F64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x2F64Sse2.hpp"/>
+        <FILE id="IskXqN" name="Upsampler2x3dnow.h" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x3dnow.h"/>
-        <FILE id="TAGX4C" name="Upsampler2x3dnow.hpp" compile="0" resource="0"
+        <FILE id="l3eYYg" name="Upsampler2x3dnow.hpp" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x3dnow.hpp"/>
-        <FILE id="Ea18vO" name="Upsampler2x4AvxDouble.h" compile="0" resource="0"
-              file="oversimple/hiir/Upsampler2x4AvxDouble.h"/>
-        <FILE id="aQmcqh" name="Upsampler2x4AvxDouble.hpp" compile="0" resource="0"
-              file="oversimple/hiir/Upsampler2x4AvxDouble.hpp"/>
-        <FILE id="cjdoOl" name="Upsampler2x4Neon.h" compile="0" resource="0"
+        <FILE id="CkJuM2" name="Upsampler2x4F64Avx.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x4F64Avx.h"/>
+        <FILE id="dGI8pm" name="Upsampler2x4F64Avx.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x4F64Avx.hpp"/>
+        <FILE id="dQbS0v" name="Upsampler2x4Neon.h" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x4Neon.h"/>
-        <FILE id="LSgWkT" name="Upsampler2x4Neon.hpp" compile="0" resource="0"
+        <FILE id="enr4t9" name="Upsampler2x4Neon.hpp" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x4Neon.hpp"/>
-        <FILE id="HlqnlB" name="Upsampler2x4Sse.h" compile="0" resource="0"
+        <FILE id="hL1mgP" name="Upsampler2x4Sse.h" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x4Sse.h"/>
-        <FILE id="vbtd0T" name="Upsampler2x4Sse.hpp" compile="0" resource="0"
+        <FILE id="Gbsn5W" name="Upsampler2x4Sse.hpp" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x4Sse.hpp"/>
-        <FILE id="BW5ba9" name="Upsampler2x8Avx.h" compile="0" resource="0"
+        <FILE id="H5Qo6v" name="Upsampler2x8Avx.h" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x8Avx.h"/>
-        <FILE id="rXak9y" name="Upsampler2x8Avx.hpp" compile="0" resource="0"
+        <FILE id="BzglRf" name="Upsampler2x8Avx.hpp" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2x8Avx.hpp"/>
-        <FILE id="Y6WUng" name="Upsampler2xFpu.h" compile="0" resource="0"
+        <FILE id="vmKPNu" name="Upsampler2x8F64Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x8F64Avx512.h"/>
+        <FILE id="KMSypd" name="Upsampler2x8F64Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x8F64Avx512.hpp"/>
+        <FILE id="p5akEs" name="Upsampler2x16Avx512.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x16Avx512.h"/>
+        <FILE id="saTT1Z" name="Upsampler2x16Avx512.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2x16Avx512.hpp"/>
+        <FILE id="AlIhhb" name="Upsampler2xF64Fpu.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xF64Fpu.h"/>
+        <FILE id="DhprKc" name="Upsampler2xF64Sse2.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xF64Sse2.h"/>
+        <FILE id="CBy3vw" name="Upsampler2xF64Sse2.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xF64Sse2.hpp"/>
+        <FILE id="yTpX1x" name="Upsampler2xFpu.h" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2xFpu.h"/>
-        <FILE id="IQcxtp" name="Upsampler2xFpu.hpp" compile="0" resource="0"
-              file="oversimple/hiir/Upsampler2xFpu.hpp"/>
-        <FILE id="sjoRYc" name="Upsampler2xNeon.h" compile="0" resource="0"
+        <FILE id="BtRmgo" name="Upsampler2xFpuTpl.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xFpuTpl.h"/>
+        <FILE id="dFQIwi" name="Upsampler2xFpuTpl.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xFpuTpl.hpp"/>
+        <FILE id="DJRZJ9" name="Upsampler2xNeon.h" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2xNeon.h"/>
-        <FILE id="pLes8N" name="Upsampler2xNeon.hpp" compile="0" resource="0"
+        <FILE id="XfnHtf" name="Upsampler2xNeon.hpp" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2xNeon.hpp"/>
-        <FILE id="bmUU7v" name="Upsampler2xSse.h" compile="0" resource="0"
+        <FILE id="DfMNQ9" name="Upsampler2xNeonOld.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xNeonOld.h"/>
+        <FILE id="bVq86c" name="Upsampler2xNeonOld.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xNeonOld.hpp"/>
+        <FILE id="KFIrER" name="Upsampler2xSse.h" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2xSse.h"/>
-        <FILE id="YnB7SX" name="Upsampler2xSse.hpp" compile="0" resource="0"
+        <FILE id="pNbw2V" name="Upsampler2xSse.hpp" compile="0" resource="0"
               file="oversimple/hiir/Upsampler2xSse.hpp"/>
+        <FILE id="LtBpv4" name="Upsampler2xSseOld.h" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xSseOld.h"/>
+        <FILE id="gjP1p6" name="Upsampler2xSseOld.hpp" compile="0" resource="0"
+              file="oversimple/hiir/Upsampler2xSseOld.hpp"/>
       </GROUP>
       <FILE id="oxyaFI" name="Oversampling.hpp" compile="0" resource="0"
             file="oversimple/oversimple/Oversampling.hpp"/>
