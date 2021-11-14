@@ -45,8 +45,10 @@ private:
   AttachedSlider smoothing;
   Label smoothingLabel{ {}, "Smoothing Time" };
 
-  AttachedComboBox oversampling;
-  AttachedToggle linearPhase;
+  ComboBox oversampling;
+  std::unique_ptr<ComboBoxParameterAttachment> oversamplingAttachment;
+  ToggleButton linearPhase;
+  ButtonParameterAttachment linearPhaseAttachment;
   Label oversamplingLabel{ {}, "Oversampling" };
 
   std::array<LinkableControl<AttachedSlider>, 2> gain;

@@ -20,10 +20,10 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "Linkables.h"
-#include "OversamplingParameters.h"
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
 #include "adsp/Spline.hpp"
+#include "oversimple/Oversampling.hpp"
 #include <JuceHeader.h>
 
 #ifndef OVERDRAW_UI_SCALE
@@ -49,7 +49,8 @@ private:
 
     AudioParameterFloat* smoothingTime;
 
-    OversamplingParameters oversampling;
+    AudioParameterChoice* oversamplingOrder;
+    AudioParameterBool* oversamplingLinearPhase;
 
     LinkableParameter<WrappedBoolParameter> symmetry;
 
@@ -77,7 +78,7 @@ private:
   double gain[2][2] = { { 1.0, 1.0 }, { 1.0, 1.0 } };
   double wetAmount[2] = { 1.0, 1.0 };
 
-  ScalarBuffer<double> dryBuffer{ 2 };
+  Buffer<double> dryBuffer{ 2 };
 
   VecBuffer<Vec2d> vuMeterBuffer{ 3 };
 
@@ -85,13 +86,15 @@ private:
   AudioBuffer<double> floatToDouble;
 
   // oversampling
-  using Oversampling = oversimple::Oversampling<double>;
-  using OversamplingSettings = oversimple::OversamplingSettings;
+  using Oversampler = oversimple::TOversampling<double>;
 
-  OversamplingSettings oversamplingSettings;
-  std::unique_ptr<Oversampling> oversampling;
-  std::recursive_mutex oversamplingMutex;
-  OversamplingAttachments<double, std::recursive_mutex> oversamplingAttachments;
+  struct Oversampling
+  {
+    Oversampler signal;
+    Oversampler dry;
+  };
+
+  Oversampling oversampling;
 
 public:
   // for gui
@@ -99,6 +102,8 @@ public:
   std::array<std::atomic<float>, 2> vuMeterResults;
 
   Parameters& getOverdrawParameters() { return parameters; }
+
+  void updateOversamplingLatency();
 
   // AudioProcessor interface
 

@@ -91,7 +91,23 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
       ? 0.0
       : exp(-MathConstants<double>::twoPi * invSampleRate / smoothingTime);
 
-  double const invUpsampledSampleRate = invSampleRate / oversampling->getRate();
+  
+  auto const oversamplingOrder =
+    static_cast<uint32_t>(parameters.oversamplingOrder->getIndex());
+  auto const oversamplingRate = static_cast<double>(1 << oversamplingOrder);
+  auto const isOversampling = oversamplingOrder > 0;
+
+  if (isOversampling) {
+    oversampling.signal.setOrder(oversamplingOrder);
+    oversampling.dry.setOrder(oversamplingOrder);
+
+    auto const isUsingLinearPhase = parameters.oversamplingLinearPhase->get();
+
+    oversampling.signal.setUseLinearPhase(isUsingLinearPhase);
+    oversampling.dry.setUseLinearPhase(isUsingLinearPhase);
+  }
+
+  double const invUpsampledSampleRate = invSampleRate / oversamplingRate;
 
   double const upsampledAutomationAlpha =
     smoothingTime == 0.0 ? 0.0
@@ -150,24 +166,31 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // oversampling
 
-  oversampling->prepareBuffers(numSamples); // extra safety measure
+  if (isOversampling) {
+    auto const numUpsampledSamples =
+      oversampling.signal.upSample(ioAudio, numSamples);
 
-  int const numUpsampledSamples =
-    oversampling->scalarToVecUpsamplers[0]->processBlock(
-      ioAudio, 2, numSamples);
+    oversampling.dry.upSample(dryBuffer.get(), numSamples);
 
-  oversampling->scalarToVecUpsamplers[1]->processBlock(
-    dryBuffer.get(), 2, numSamples);
-
-  if (numUpsampledSamples == 0) {
-    for (auto i = 0; i < totalNumOutputChannels; ++i) {
-      buffer.clear(i, 0, numSamples);
+    if (numUpsampledSamples == 0) {
+      for (auto i = 0; i < totalNumOutputChannels; ++i) {
+        buffer.clear(i, 0, numSamples);
+      }
+      return;
     }
-    return;
   }
 
-  auto& upsampledBuffer = oversampling->scalarToVecUpsamplers[0]->getOutput();
+  auto& upsampledBuffer = oversampling.signal.getUpSampleOutputInterleaved();
   auto& upsampledIo = upsampledBuffer.getBuffer2(0);
+  auto& upsampledDryBuffer = oversampling.dry.getUpSampleOutputInterleaved();
+
+  if (!isOversampling) {
+    upsampledBuffer.setNumSamples(numSamples);
+    upsampledBuffer.interleave(ioAudio, 2, numSamples);
+
+    upsampledDryBuffer.setNumSamples(numSamples);
+    upsampledDryBuffer.interleave(dryBuffer.get(), 2, numSamples);
+  }
 
   // waveshaping
 
@@ -178,19 +201,19 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // downsampling
 
-  oversampling->vecToVecDownsamplers[0]->processBlock(
-    upsampledBuffer, 2, numUpsampledSamples, numSamples);
+  if (isOversampling) {
+    oversampling.signal.downSample(upsampledBuffer, numSamples);
+    oversampling.dry.downSample(upsampledDryBuffer, numSamples);
+  }
 
-  oversampling->vecToVecDownsamplers[1]->processBlock(
-    oversampling->scalarToVecUpsamplers[1]->getOutput(),
-    2,
-    numUpsampledSamples,
-    numSamples);
+  // dry-wet and output gain
 
-  // dry-wet, output gain and vu meter
-
-  auto& wetOutput = oversampling->vecToVecDownsamplers[0]->getOutput();
-  auto& dryOutput = oversampling->vecToVecDownsamplers[1]->getOutput();
+  auto& wetOutput = isOversampling
+                      ? oversampling.signal.getDownSampleOutputInterleaved()
+                      : upsampledBuffer;
+  auto& dryOutput = isOversampling
+                      ? oversampling.dry.getDownSampleOutputInterleaved()
+                      : upsampledDryBuffer;
 
   constexpr double vuMeterFrequency = 10.0;
 

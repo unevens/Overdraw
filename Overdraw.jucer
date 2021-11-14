@@ -5,7 +5,7 @@
               companyCopyright="Copyright Dario Mambro 2020-2021" companyWebsite="www.unevens.net"
               companyEmail="hi@unevens.net" headerPath="../../audio-dsp&#10;../../oversimple&#10;../../oversimple/avec&#10;../../oversimple/avec/vectorclass&#10;../../oversimple/r8brain&#10;../../juicy&#10;$(BOOST_INCLUDEDIR)&#10;"
               defines="PFFFT_ENABLE_DOUBLE=1&#10;R8B_PFFFT_DOUBLE=1&#10;NOMINMAX=1"
-              pluginCode="Odrw" pluginManufacturerCode="UnEv" version="1.1.5"
+              pluginCode="Odrw" pluginManufacturerCode="UnEv" version="1.2"
               jucerFormatVersion="1">
   <MAINGROUP id="Ayh0pr" name="Overdraw">
     <GROUP id="{215C9066-A75F-F5CA-873A-FAAC46F3DE3D}" name="audio-dsp">
@@ -21,8 +21,6 @@
       <FILE id="meNnpf" name="GainVuMeter.cpp" compile="1" resource="0" file="juicy/GainVuMeter.cpp"/>
       <FILE id="TnjL95" name="GainVuMeter.h" compile="0" resource="0" file="juicy/GainVuMeter.h"/>
       <FILE id="b7clfs" name="Linkables.h" compile="0" resource="0" file="juicy/Linkables.h"/>
-      <FILE id="uoZVW6" name="OversamplingParameters.h" compile="0" resource="0"
-            file="juicy/OversamplingParameters.h"/>
       <FILE id="mNscIY" name="SimpleLookAndFeel.cpp" compile="1" resource="0"
             file="juicy/SimpleLookAndFeel.cpp"/>
       <FILE id="QuZUgW" name="SimpleLookAndFeel.h" compile="0" resource="0"
@@ -82,8 +80,6 @@
       <GROUP id="{6AD72D82-253F-6771-1CD7-80CD51492194}" name="avec">
         <GROUP id="{17412750-A4A0-D636-61BF-639D10859B39}" name="vcl">
           <FILE id="XKlllf" name="instrset.h" compile="0" resource="0" file="oversimple/avec/vectorclass/instrset.h"/>
-          <FILE id="HbQ70L" name="instrset_detect.cpp" compile="1" resource="0"
-                file="oversimple/avec/vectorclass/instrset_detect.cpp"/>
           <FILE id="fyifB5" name="vector_convert.h" compile="0" resource="0"
                 file="oversimple/avec/vectorclass/vector_convert.h"/>
           <FILE id="AvqPIB" name="vectorclass.h" compile="0" resource="0" file="oversimple/avec/vectorclass/vectorclass.h"/>
@@ -110,23 +106,22 @@
           <FILE id="ZYGwhK" name="vectormath_trig.h" compile="0" resource="0"
                 file="oversimple/avec/vectorclass/vectormath_trig.h"/>
         </GROUP>
-        <FILE id="Hr8aBw" name="Alignment.hpp" compile="0" resource="0" file="oversimple/avec/avec/Alignment.hpp"/>
-        <FILE id="usEimR" name="Avec.hpp" compile="0" resource="0" file="oversimple/avec/avec/Avec.hpp"/>
-        <FILE id="X7GbnL" name="BoostAlign.hpp" compile="0" resource="0" file="oversimple/avec/avec/BoostAlign.hpp"/>
-        <FILE id="dn1bKl" name="InterleavedBuffer.hpp" compile="0" resource="0"
+        <FILE id="Xcnmhy" name="Alignment.hpp" compile="0" resource="0" file="oversimple/avec/avec/Alignment.hpp"/>
+        <FILE id="agbg8D" name="Avec.hpp" compile="0" resource="0" file="oversimple/avec/avec/Avec.hpp"/>
+        <FILE id="MJztex" name="BoostAlign.hpp" compile="0" resource="0" file="oversimple/avec/avec/BoostAlign.hpp"/>
+        <FILE id="uojn1Q" name="Buffer.hpp" compile="0" resource="0" file="oversimple/avec/avec/Buffer.hpp"/>
+        <FILE id="WPFKml" name="InterleavedBuffer.hpp" compile="0" resource="0"
               file="oversimple/avec/avec/InterleavedBuffer.hpp"/>
-        <FILE id="L5BDin" name="NeonMath.hpp" compile="0" resource="0" file="oversimple/avec/avec/NeonMath.hpp"/>
-        <FILE id="ElKEUt" name="NeonMathDouble.hpp" compile="0" resource="0"
+        <FILE id="u7SUYe" name="NeonMath.hpp" compile="0" resource="0" file="oversimple/avec/avec/NeonMath.hpp"/>
+        <FILE id="NLl3eZ" name="NeonMathDouble.hpp" compile="0" resource="0"
               file="oversimple/avec/avec/NeonMathDouble.hpp"/>
-        <FILE id="UC58sU" name="NeonMathFloat.hpp" compile="0" resource="0"
+        <FILE id="GRITWN" name="NeonMathFloat.hpp" compile="0" resource="0"
               file="oversimple/avec/avec/NeonMathFloat.hpp"/>
-        <FILE id="XfALVT" name="NeonVec.hpp" compile="0" resource="0" file="oversimple/avec/avec/NeonVec.hpp"/>
-        <FILE id="EgDjWq" name="ScalarBuffer.hpp" compile="0" resource="0"
-              file="oversimple/avec/avec/ScalarBuffer.hpp"/>
-        <FILE id="VRPsAC" name="Simd.hpp" compile="0" resource="0" file="oversimple/avec/avec/Simd.hpp"/>
-        <FILE id="JDaBwX" name="Traits.hpp" compile="0" resource="0" file="oversimple/avec/avec/Traits.hpp"/>
-        <FILE id="h4TwJh" name="VecBuffer.hpp" compile="0" resource="0" file="oversimple/avec/avec/VecBuffer.hpp"/>
-        <FILE id="GuzbDV" name="VecView.hpp" compile="0" resource="0" file="oversimple/avec/avec/VecView.hpp"/>
+        <FILE id="fc3wLx" name="NeonVec.hpp" compile="0" resource="0" file="oversimple/avec/avec/NeonVec.hpp"/>
+        <FILE id="V2hlUj" name="Simd.hpp" compile="0" resource="0" file="oversimple/avec/avec/Simd.hpp"/>
+        <FILE id="SeHPsE" name="Traits.hpp" compile="0" resource="0" file="oversimple/avec/avec/Traits.hpp"/>
+        <FILE id="mt6mEG" name="VecBuffer.hpp" compile="0" resource="0" file="oversimple/avec/avec/VecBuffer.hpp"/>
+        <FILE id="a4DbPr" name="VecView.hpp" compile="0" resource="0" file="oversimple/avec/avec/VecView.hpp"/>
       </GROUP>
       <GROUP id="{E2F8119C-5FB4-6460-FB26-B4E6F59BB5BC}" name="hiir">
         <FILE id="IBDop3" name="def.h" compile="0" resource="0" file="oversimple/hiir/def.h"/>
@@ -388,8 +383,6 @@
             file="oversimple/oversimple/IirOversampling.hpp"/>
       <FILE id="Z5TIv7" name="IirOversamplingDesigner.hpp" compile="0" resource="0"
             file="oversimple/oversimple/IirOversamplingDesigner.hpp"/>
-      <FILE id="DumL6E" name="IirOversamplingFactory.hpp" compile="0" resource="0"
-            file="oversimple/oversimple/IirOversamplingFactory.hpp"/>
     </GROUP>
     <GROUP id="{A474DA88-0D09-9FDF-6DAE-6916A8BA27B4}" name="Source">
       <FILE id="er9RVx" name="Processing.cpp" compile="1" resource="0" file="Source/Processing.cpp"/>

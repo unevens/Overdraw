@@ -51,14 +51,8 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   , channelLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
-  , oversampling(*this,
-                 *p.getOverdrawParameters().apvts,
-                 "Oversampling",
-                 { "1x", "2x", "4x", "8x", "16x", "32x" })
-
-  , linearPhase(*this,
-                *p.getOverdrawParameters().apvts,
-                "Linear-Phase-Oversampling")
+  , linearPhaseAttachment(*p.getOverdrawParameters().oversamplingLinearPhase,
+                          linearPhase)
 
   , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
 
@@ -68,6 +62,9 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
                                          BinaryData::background_pngSize))
 
 {
+  oversampling.onChange = [this] { processor.updateOversamplingLatency(); };
+  linearPhase.onClick = [this] { processor.updateOversamplingLatency(); };
+
   addAndMakeVisible(spline);
   addAndMakeVisible(selectedKnot);
   addAndMakeVisible(oversamplingLabel);
@@ -77,6 +74,8 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(vuMeter);
   addAndMakeVisible(url);
   addAndMakeVisible(channelLabels);
+  addAndMakeVisible(oversampling);
+  addAndMakeVisible(linearPhase);
 
   for (int i = 0; i < 2; ++i) {
     addAndMakeVisible(gain[i]);
@@ -88,7 +87,10 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   smoothingLabel.setJustificationType(Justification::centred);
 
   midSide.getControl().setButtonText("Mid Side");
-  linearPhase.getControl().setButtonText("Linear Phase");
+  linearPhase.setButtonText("Linear Phase");
+  oversampling.addItemList({ "1x", "2x", "4x", "8x", "16x", "32x" }, 1);
+  oversamplingAttachment = std::make_unique<ComboBoxParameterAttachment>(
+    *p.getOverdrawParameters().oversamplingOrder, oversampling);
 
   vuMeter.internalColour = backgroundColour;
 
@@ -237,12 +239,12 @@ OverdrawAudioProcessorEditor::resized()
                           Track(Grid::Px(40._p)),
                           Track(Grid::Px(40._p)) };
     grid.items = { GridItem(oversamplingLabel),
-                   GridItem(oversampling.getControl())
+                   GridItem(oversampling)
                      .withWidth(70)
                      .withHeight(30._p)
                      .withAlignSelf(GridItem::AlignSelf::center)
                      .withJustifySelf(GridItem::JustifySelf::center),
-                   GridItem(linearPhase.getControl())
+                   GridItem(linearPhase)
                      .withWidth(120)
                      .withAlignSelf(GridItem::AlignSelf::center)
                      .withJustifySelf(GridItem::JustifySelf::center) };

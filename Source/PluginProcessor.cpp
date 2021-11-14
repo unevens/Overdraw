@@ -85,10 +85,12 @@ OverdrawAudioProcessor::Parameters::Parameters(
 
   smoothingTime = createFloatParameter("Smoothing-Time", 50.0, 0.0, 500.0, 1.f);
 
-  oversampling = { static_cast<RangedAudioParameter*>(createChoiceParameter(
-                     "Oversampling", { "1x", "2x", "4x", "8x", "16x", "32x" })),
-                   createWrappedBoolParameter("Linear-Phase-Oversampling",
-                                              false) };
+
+  oversamplingOrder = createChoiceParameter(
+    "Oversampling", { "1x", "2x", "4x", "8x", "16x", "32x" });
+
+  oversamplingLinearPhase =
+    createBoolParameter("Linear-Phase-Oversampling", false);
 
   symmetry = createLinkableBoolParameters("Symmetry", true);
 
@@ -118,6 +120,20 @@ OverdrawAudioProcessor::Parameters::Parameters(
       processor, nullptr, "OVERDRAW-PARAMETERS", std::move(layout)));
 }
 
+void
+OverdrawAudioProcessor::updateOversamplingLatency()
+{
+  auto const order = parameters.oversamplingOrder->getIndex();
+  auto const linearPhase = parameters.oversamplingLinearPhase->get();
+  if (linearPhase) {
+    auto const latency = oversampling.signal.getLatency(order, true);
+    setLatencySamples(latency);
+  }
+  else {
+    setLatencySamples(0);
+  }
+}
+
 OverdrawAudioProcessor::OverdrawAudioProcessor()
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -130,25 +146,21 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , spline(avec::Aligned<Spline>::make())
 
-  , oversamplingSettings([this] {
-    auto oversamplingSettings = OversamplingSettings{};
-    oversamplingSettings.numScalarToVecUpsamplers = 2;
-    oversamplingSettings.numVecToVecDownsamplers = 2;
-    oversamplingSettings.numChannels = 2;
-    oversamplingSettings.updateLatency = [this](int latency) {
-      setLatencySamples(latency);
-    };
-    return oversamplingSettings;
+  , oversampling([] {
+    oversimple::OversamplingSettings settings;
+    settings.numDownSampledChannels = 2;
+    settings.numDownSampledChannels = 2;
+    settings.upSampleInputBufferType = oversimple::BufferType::plain;
+    settings.upSampleOutputBufferType =
+      oversimple::BufferType::interleaved;
+    settings.downSampleInputBufferType =
+      oversimple::BufferType::interleaved;
+    settings.downSampleOutputBufferType =
+      oversimple::BufferType::interleaved;
+
+    return Oversampling{ Oversampler(settings),
+                         Oversampler(settings) };
   }())
-
-  , oversampling(std::make_unique<Oversampling>(oversamplingSettings))
-
-  , oversamplingAttachments(parameters.oversampling,
-                            *parameters.apvts,
-                            this,
-                            &oversampling,
-                            &oversamplingSettings,
-                            &oversamplingMutex)
 {
   looks.simpleFontSize *= uiGlobalScaleFactor;
   looks.simpleSliderLabelFontSize *= uiGlobalScaleFactor;
@@ -164,11 +176,8 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
   dryBuffer.setNumSamples(samplesPerBlock);
 
-  if (oversamplingSettings.numSamplesPerBlock != samplesPerBlock) {
-    auto const guard = std::lock_guard<std::recursive_mutex>(oversamplingMutex);
-    oversamplingSettings.numSamplesPerBlock = samplesPerBlock;
-    oversampling = std::make_unique<Oversampling>(oversamplingSettings);
-  }
+  oversampling.signal.prepareBuffers(samplesPerBlock);
+  oversampling.dry.prepareBuffers(samplesPerBlock);
 
   reset();
 }
