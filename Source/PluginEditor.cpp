@@ -1,5 +1,5 @@
 /*
-Copyright 2020 Dario Mambro
+Copyright 2020-2026 Dario Mambro
 
 This file is part of Overdraw.
 
@@ -20,12 +20,18 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 
-OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
-  OverdrawAudioProcessor& p)
+namespace {
+constexpr int kDesignWidth = static_cast<int>(825._p);
+constexpr int kDesignHeight = static_cast<int>(1010._p);
+constexpr float kMinScale = 0.5f;
+constexpr float kMaxScale = 2.0f;
+constexpr float kDefaultScale = 0.75f;
+constexpr char const* kEditorWidthProperty = "editorWidth";
+}
 
-  : AudioProcessorEditor(&p)
+OverdrawAudioProcessorEditor::Content::Content(OverdrawAudioProcessor& p)
 
-  , processor(p)
+  : processor(p)
 
   , spline(*p.getOverdrawParameters().spline,
            *p.getOverdrawParameters().apvts,
@@ -34,7 +40,20 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   , selectedKnot(*p.getOverdrawParameters().spline,
                  *p.getOverdrawParameters().apvts)
 
+  , vuMeter({ { &p.vuMeterResults[0], &p.vuMeterResults[1] } }, 36.f)
+
   , midSide(*this, *p.getOverdrawParameters().apvts, "Mid-Side")
+
+  , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
+
+  , oversampling(*this,
+                 *p.getOverdrawParameters().apvts,
+                 "Oversampling",
+                 { "1x", "2x", "4x", "8x", "16x", "32x" })
+
+  , linearPhase(*this,
+                *p.getOverdrawParameters().apvts,
+                "Linear-Phase-Oversampling")
 
   , gain{ { { *p.getOverdrawParameters().apvts,
               "Input Gain",
@@ -51,20 +70,9 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
 
   , channelLabels(*p.getOverdrawParameters().apvts, "Mid-Side")
 
-  , linearPhaseAttachment(*p.getOverdrawParameters().oversamplingLinearPhase,
-                          linearPhase)
-
-  , smoothing(*this, *p.getOverdrawParameters().apvts, "Smoothing-Time")
-
-  , vuMeter({ { &p.vuMeterResults[0], &p.vuMeterResults[1] } }, 36.f)
-
   , background(ImageCache::getFromMemory(BinaryData::background_png,
                                          BinaryData::background_pngSize))
-
 {
-  oversampling.onChange = [this] { processor.updateOversamplingLatency(); };
-  linearPhase.onClick = [this] { processor.updateOversamplingLatency(); };
-
   addAndMakeVisible(spline);
   addAndMakeVisible(selectedKnot);
   addAndMakeVisible(oversamplingLabel);
@@ -74,8 +82,6 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   addAndMakeVisible(vuMeter);
   addAndMakeVisible(url);
   addAndMakeVisible(channelLabels);
-  addAndMakeVisible(oversampling);
-  addAndMakeVisible(linearPhase);
 
   for (int i = 0; i < 2; ++i) {
     addAndMakeVisible(gain[i]);
@@ -87,10 +93,7 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   smoothingLabel.setJustificationType(Justification::centred);
 
   midSide.getControl().setButtonText("Mid Side");
-  linearPhase.setButtonText("Linear Phase");
-  oversampling.addItemList({ "1x", "2x", "4x", "8x", "16x", "32x" }, 1);
-  oversamplingAttachment = std::make_unique<ComboBoxParameterAttachment>(
-    *p.getOverdrawParameters().oversamplingOrder, oversampling);
+  linearPhase.getControl().setButtonText("Linear Phase");
 
   vuMeter.internalColour = backgroundColour;
 
@@ -137,13 +140,11 @@ OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
   url.setText("www.unevens.net", dontSendNotification);
   url.setJustification(Justification::left);
 
-  setSize(825._p, 1010._p);
+  setSize(kDesignWidth, kDesignHeight);
 }
 
-OverdrawAudioProcessorEditor::~OverdrawAudioProcessorEditor() {}
-
 void
-OverdrawAudioProcessorEditor::paint(Graphics& g)
+OverdrawAudioProcessorEditor::Content::paint(Graphics& g)
 {
   g.drawImage(background, getLocalBounds().toFloat());
 
@@ -169,12 +170,10 @@ OverdrawAudioProcessorEditor::paint(Graphics& g)
 }
 
 void
-OverdrawAudioProcessorEditor::resized()
+OverdrawAudioProcessorEditor::Content::resized()
 {
   constexpr auto offset = 10._p;
-  constexpr auto rowHeight = 40._p;
   constexpr auto splineEditorSide = 605._p;
-  constexpr auto knotEditorHeight = 160._p;
 
   spline.setTopLeftPosition(offset + 1, offset + 1);
   spline.setSize(splineEditorSide - 2, splineEditorSide - 2);
@@ -239,12 +238,12 @@ OverdrawAudioProcessorEditor::resized()
                           Track(Grid::Px(40._p)),
                           Track(Grid::Px(40._p)) };
     grid.items = { GridItem(oversamplingLabel),
-                   GridItem(oversampling)
+                   GridItem(oversampling.getControl())
                      .withWidth(70)
                      .withHeight(30._p)
                      .withAlignSelf(GridItem::AlignSelf::center)
                      .withJustifySelf(GridItem::JustifySelf::center),
-                   GridItem(linearPhase)
+                   GridItem(linearPhase.getControl())
                      .withWidth(120)
                      .withAlignSelf(GridItem::AlignSelf::center)
                      .withJustifySelf(GridItem::JustifySelf::center) };
@@ -263,4 +262,53 @@ OverdrawAudioProcessorEditor::resized()
     spline.getBottom() - offset,
     jmax(spline.getWidth(), selectedKnot.getWidth()),
     selectedKnot.getBottom() - spline.getBottom() + offset);
+}
+
+OverdrawAudioProcessorEditor::OverdrawAudioProcessorEditor(
+  OverdrawAudioProcessor& p)
+  : AudioProcessorEditor(&p)
+  , processor(p)
+  , content(p)
+{
+  addAndMakeVisible(content);
+
+  setResizable(true, true);
+  constrainer.setFixedAspectRatio(static_cast<double>(kDesignWidth) /
+                                  static_cast<double>(kDesignHeight));
+  constrainer.setSizeLimits(static_cast<int>(kDesignWidth * kMinScale),
+                            static_cast<int>(kDesignHeight * kMinScale),
+                            static_cast<int>(kDesignWidth * kMaxScale),
+                            static_cast<int>(kDesignHeight * kMaxScale));
+  setConstrainer(&constrainer);
+
+  auto& state = p.getOverdrawParameters().apvts->state;
+  int const defaultWidth = static_cast<int>(kDesignWidth * kDefaultScale);
+  int const savedWidth =
+    static_cast<int>(state.getProperty(kEditorWidthProperty, defaultWidth));
+  int const initialWidth =
+    juce::jlimit(static_cast<int>(kDesignWidth * kMinScale),
+                 static_cast<int>(kDesignWidth * kMaxScale),
+                 savedWidth);
+  int const initialHeight = static_cast<int>(
+    initialWidth * static_cast<double>(kDesignHeight) /
+    static_cast<double>(kDesignWidth));
+  setSize(initialWidth, initialHeight);
+}
+
+OverdrawAudioProcessorEditor::~OverdrawAudioProcessorEditor() {}
+
+void
+OverdrawAudioProcessorEditor::resized()
+{
+  if (getWidth() <= 0 || getHeight() <= 0) {
+    return;
+  }
+
+  float const scale =
+    static_cast<float>(getWidth()) / static_cast<float>(kDesignWidth);
+  content.setTransform(AffineTransform::scale(scale));
+  content.setSize(kDesignWidth, kDesignHeight);
+
+  processor.getOverdrawParameters().apvts->state.setProperty(
+    kEditorWidthProperty, getWidth(), nullptr);
 }

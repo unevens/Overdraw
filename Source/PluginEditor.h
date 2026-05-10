@@ -1,5 +1,5 @@
 /*
-Copyright 2020 Dario Mambro
+Copyright 2020-2026 Dario Mambro
 
 This file is part of Overdraw.
 
@@ -19,9 +19,9 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include "GainVuMeter.h"
 #include "PluginProcessor.h"
 #include "SplineEditor.h"
-#include "GainVuMeter.h"
 #include <JuceHeader.h>
 
 class OverdrawAudioProcessorEditor : public AudioProcessorEditor
@@ -30,38 +30,49 @@ public:
   OverdrawAudioProcessorEditor(OverdrawAudioProcessor&);
   ~OverdrawAudioProcessorEditor();
 
-  void paint(Graphics&) override;
   void resized() override;
 
 private:
+  // The whole UI lives in design coordinates inside `Content`. The outer
+  // editor scales it via setTransform on resize, so child components and the
+  // juicy submodule never learn about runtime scaling.
+  struct Content : public Component
+  {
+    Content(OverdrawAudioProcessor&);
+    void paint(Graphics&) override;
+    void resized() override;
+
+    OverdrawAudioProcessor& processor;
+
+    SplineEditor spline;
+    SplineKnotEditor selectedKnot;
+
+    GainVuMeter vuMeter;
+
+    AttachedToggle midSide;
+    AttachedSlider smoothing;
+    Label smoothingLabel{ {}, "Smoothing Time" };
+
+    AttachedComboBox oversampling;
+    AttachedToggle linearPhase;
+    Label oversamplingLabel{ {}, "Oversampling" };
+
+    std::array<LinkableControl<AttachedSlider>, 2> gain;
+    LinkableControl<AttachedSlider> wet;
+    LinkableControl<AttachedToggle> symmetry;
+    ChannelLabels channelLabels;
+
+    TextEditor url;
+
+    Colour lineColour = Colours::white;
+    Colour backgroundColour = Colours::black.withAlpha(0.6f);
+
+    Image background;
+  };
+
   OverdrawAudioProcessor& processor;
-
-  SplineEditor spline;
-  SplineKnotEditor selectedKnot;
-
-  GainVuMeter vuMeter;
-
-  AttachedToggle midSide;
-  AttachedSlider smoothing;
-  Label smoothingLabel{ {}, "Smoothing Time" };
-
-  ComboBox oversampling;
-  std::unique_ptr<ComboBoxParameterAttachment> oversamplingAttachment;
-  ToggleButton linearPhase;
-  ButtonParameterAttachment linearPhaseAttachment;
-  Label oversamplingLabel{ {}, "Oversampling" };
-
-  std::array<LinkableControl<AttachedSlider>, 2> gain;
-  LinkableControl<AttachedSlider> wet;
-  LinkableControl<AttachedToggle> symmetry;
-  ChannelLabels channelLabels;
-
-  TextEditor url;
-
-  Colour lineColour = Colours::white;
-  Colour backgroundColour = Colours::black.withAlpha(0.6f);
-
-  Image background;
+  Content content;
+  ComponentBoundsConstrainer constrainer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OverdrawAudioProcessorEditor)
 };
