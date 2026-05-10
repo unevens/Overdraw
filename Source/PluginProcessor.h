@@ -1,5 +1,5 @@
 /*
-Copyright 2020 Dario Mambro
+Copyright 2020-2026 Dario Mambro
 
 This file is part of Overdraw.
 
@@ -20,10 +20,11 @@ along with Overdraw.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "Linkables.h"
+#include "OverdrawDsp.h"
+#include "OversamplingAttachments.h"
 #include "SimpleLookAndFeel.h"
 #include "SplineParameters.h"
-#include "adsp/Spline.hpp"
-#include "oversimple/Oversampling.hpp"
+#include "avec/Buffer.hpp"
 #include <JuceHeader.h>
 
 #ifndef OVERDRAW_UI_SCALE
@@ -40,7 +41,7 @@ constexpr static long double operator"" _p(long double px)
 class OverdrawAudioProcessor : public AudioProcessor
 {
 public:
-  static constexpr int maxNumKnots = 15;
+  static constexpr int maxNumKnots = overdraw::maxNumKnots;
 
 private:
   struct Parameters
@@ -49,8 +50,7 @@ private:
 
     AudioParameterFloat* smoothingTime;
 
-    AudioParameterChoice* oversamplingOrder;
-    AudioParameterBool* oversamplingLinearPhase;
+    OversamplingParameters oversampling;
 
     LinkableParameter<WrappedBoolParameter> symmetry;
 
@@ -67,18 +67,12 @@ private:
 
   Parameters parameters;
 
-  using Spline = adsp::AutoSpline<Vec2d, maxNumKnots>;
-
-  aligned_ptr<Spline> spline;
-
-  adsp::AutoSplineDispatcher<Vec2d, maxNumKnots> splineDispatcher;
-
-  double automationTime = 50.0;
+  aligned_ptr<overdraw::Dsp> dsp;
 
   double gain[2][2] = { { 1.0, 1.0 }, { 1.0, 1.0 } };
   double wetAmount[2] = { 1.0, 1.0 };
 
-  Buffer<double> dryBuffer{ 2 };
+  avec::Buffer<double> dryBuffer{ 2 };
 
   VecBuffer<Vec2d> vuMeterBuffer{ 3 };
 
@@ -86,15 +80,11 @@ private:
   AudioBuffer<double> floatToDouble;
 
   // oversampling
-  using Oversampler = oversimple::TOversampling<double>;
-
-  struct Oversampling
-  {
-    Oversampler signal;
-    Oversampler dry;
-  };
-
-  Oversampling oversampling;
+  oversimple::OversamplingSettings oversamplingSettings;
+  oversimple::TOversampling<double> signalOversampling;
+  oversimple::TOversampling<double> dryOversampling;
+  std::recursive_mutex oversamplingMutex;
+  OversamplingAttachments<std::recursive_mutex> oversamplingAttachments;
 
 public:
   // for gui
@@ -102,8 +92,6 @@ public:
   std::array<std::atomic<float>, 2> vuMeterResults;
 
   Parameters& getOverdrawParameters() { return parameters; }
-
-  void updateOversamplingLatency();
 
   // AudioProcessor interface
 

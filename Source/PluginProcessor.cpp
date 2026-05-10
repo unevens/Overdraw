@@ -1,5 +1,5 @@
 /*
-Copyright 2020 Dario Mambro
+Copyright 2020-2026 Dario Mambro
 
 This file is part of Overdraw.
 
@@ -72,25 +72,14 @@ OverdrawAudioProcessor::Parameters::Parameters(
     };
   };
 
-  auto const createLinkableChoiceParameters =
-    [&](String name, StringArray choices, int defaultIndex = 0) {
-      return LinkableParameter<AudioParameterChoice>{
-        createWrappedBoolParameter(name + linkSuffix, true),
-        { createChoiceParameter(name + ch0Suffix, choices, defaultIndex),
-          createChoiceParameter(name + ch1Suffix, choices, defaultIndex) }
-      };
-    };
-
   midSide = createBoolParameter("Mid-Side", false);
 
   smoothingTime = createFloatParameter("Smoothing-Time", 50.0, 0.0, 500.0, 1.f);
 
-
-  oversamplingOrder = createChoiceParameter(
-    "Oversampling", { "1x", "2x", "4x", "8x", "16x", "32x" });
-
-  oversamplingLinearPhase =
-    createBoolParameter("Linear-Phase-Oversampling", false);
+  oversampling = { static_cast<RangedAudioParameter*>(createChoiceParameter(
+                     "Oversampling", { "1x", "2x", "4x", "8x", "16x", "32x" })),
+                   createWrappedBoolParameter("Linear-Phase-Oversampling",
+                                              false) };
 
   symmetry = createLinkableBoolParameters("Symmetry", true);
 
@@ -120,20 +109,6 @@ OverdrawAudioProcessor::Parameters::Parameters(
       processor, nullptr, "OVERDRAW-PARAMETERS", std::move(layout)));
 }
 
-void
-OverdrawAudioProcessor::updateOversamplingLatency()
-{
-  auto const order = parameters.oversamplingOrder->getIndex();
-  auto const linearPhase = parameters.oversamplingLinearPhase->get();
-  if (linearPhase) {
-    auto const latency = oversampling.signal.getLatency(order, true);
-    setLatencySamples(latency);
-  }
-  else {
-    setLatencySamples(0);
-  }
-}
-
 OverdrawAudioProcessor::OverdrawAudioProcessor()
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -144,23 +119,29 @@ OverdrawAudioProcessor::OverdrawAudioProcessor()
 
   , parameters(*this)
 
-  , spline(avec::Aligned<Spline>::make())
+  , dsp(Aligned<overdraw::Dsp>::make())
 
-  , oversampling([] {
-    oversimple::OversamplingSettings settings;
-    settings.numDownSampledChannels = 2;
-    settings.numDownSampledChannels = 2;
-    settings.upSampleInputBufferType = oversimple::BufferType::plain;
-    settings.upSampleOutputBufferType =
-      oversimple::BufferType::interleaved;
-    settings.downSampleInputBufferType =
-      oversimple::BufferType::interleaved;
-    settings.downSampleOutputBufferType =
-      oversimple::BufferType::interleaved;
-
-    return Oversampling{ Oversampler(settings),
-                         Oversampler(settings) };
+  , oversamplingSettings([] {
+    auto s = oversimple::OversamplingSettings{};
+    s.numUpSampledChannels = 2;
+    s.numDownSampledChannels = 2;
+    s.upSampleOutputBufferType = oversimple::BufferType::interleaved;
+    s.downSampleInputBufferType = oversimple::BufferType::interleaved;
+    s.downSampleOutputBufferType = oversimple::BufferType::interleaved;
+    s.order = 1;
+    s.isUsingLinearPhase = false;
+    return s;
   }())
+
+  , signalOversampling(oversamplingSettings)
+  , dryOversampling(oversamplingSettings)
+
+  , oversamplingAttachments(parameters.oversampling,
+                            *parameters.apvts,
+                            this,
+                            &oversamplingSettings,
+                            &oversamplingMutex,
+                            { &signalOversampling, &dryOversampling })
 {
   looks.simpleFontSize *= uiGlobalScaleFactor;
   looks.simpleSliderLabelFontSize *= uiGlobalScaleFactor;
@@ -176,8 +157,13 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
   dryBuffer.setNumSamples(samplesPerBlock);
 
-  oversampling.signal.prepareBuffers(samplesPerBlock);
-  oversampling.dry.prepareBuffers(samplesPerBlock);
+  {
+    auto const guard = std::lock_guard<std::recursive_mutex>(oversamplingMutex);
+    auto const maxIn = static_cast<uint32_t>(samplesPerBlock);
+    oversamplingSettings.maxNumInputSamples = maxIn;
+    signalOversampling.prepareBuffers(maxIn);
+    dryOversampling.prepareBuffers(maxIn);
+  }
 
   reset();
 }
@@ -185,8 +171,8 @@ OverdrawAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 void
 OverdrawAudioProcessor::reset()
 {
-  parameters.spline->updateSpline(*spline);
-  spline->reset();
+  parameters.spline->updateSpline(dsp->autoSpline);
+  dsp->autoSpline.reset();
 
   constexpr double ln10 = 2.30258509299404568402;
   constexpr double db_to_lin = ln10 / 20.0;

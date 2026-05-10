@@ -1,5 +1,5 @@
 /*
-Copyright 2020 Dario Mambro
+Copyright 2020-2026 Dario Mambro
 
 This file is part of Overdraw.
 
@@ -72,7 +72,6 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   ScopedNoDenormals noDenormals;
 
-  auto const totalNumInputChannels = getTotalNumInputChannels();
   auto const totalNumOutputChannels = getTotalNumOutputChannels();
   auto const numSamples = buffer.getNumSamples();
 
@@ -80,7 +79,7 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   bool const isMidSideEnabled = parameters.midSide->get();
 
-  int numActiveKnots = parameters.spline->updateSpline(*spline);
+  int numActiveKnots = parameters.spline->updateSpline(dsp->autoSpline);
 
   double const smoothingTime = 0.001 * parameters.smoothingTime->get();
 
@@ -91,30 +90,15 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
       ? 0.0
       : exp(-MathConstants<double>::twoPi * invSampleRate / smoothingTime);
 
-  
-  auto const oversamplingOrder =
-    static_cast<uint32_t>(parameters.oversamplingOrder->getIndex());
-  auto const oversamplingRate = static_cast<double>(1 << oversamplingOrder);
-  auto const isOversampling = oversamplingOrder > 0;
-
-  if (isOversampling) {
-    oversampling.signal.setOrder(oversamplingOrder);
-    oversampling.dry.setOrder(oversamplingOrder);
-
-    auto const isUsingLinearPhase = parameters.oversamplingLinearPhase->get();
-
-    oversampling.signal.setUseLinearPhase(isUsingLinearPhase);
-    oversampling.dry.setUseLinearPhase(isUsingLinearPhase);
-  }
-
-  double const invUpsampledSampleRate = invSampleRate / oversamplingRate;
+  double const invUpsampledSampleRate =
+    invSampleRate / signalOversampling.getOversamplingRate();
 
   double const upsampledAutomationAlpha =
     smoothingTime == 0.0 ? 0.0
                          : exp(-MathConstants<double>::twoPi *
                                invUpsampledSampleRate / smoothingTime);
 
-  spline->automator.setSmoothingAlpha(upsampledAutomationAlpha);
+  dsp->autoSpline.automator.setSmoothingAlpha(upsampledAutomationAlpha);
 
   double gainTarget[2][2];
   double wetAmountTarget[2];
@@ -127,8 +111,8 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
       gainTarget[i][c] = exp(db_to_lin * parameters.gain[i].get(c)->get());
     }
 
-    spline->spline.setIsSymmetric(
-      c, parameters.symmetry.get(c)->getValue() ? 1.0 : 0.0);
+    dsp->autoSpline.spline.setIsSymmetric(
+      c, parameters.symmetry.get(c)->getValue());
   }
 
   bool const isWetPassNeeded = [&] {
@@ -166,54 +150,42 @@ OverdrawAudioProcessor::processBlock(AudioBuffer<double>& buffer,
 
   // oversampling
 
-  if (isOversampling) {
-    auto const numUpsampledSamples =
-      oversampling.signal.upSample(ioAudio, numSamples);
+  auto const numInputSamples = static_cast<uint32_t>(numSamples);
 
-    oversampling.dry.upSample(dryBuffer.get(), numSamples);
+  signalOversampling.prepareBuffers(numInputSamples);
+  dryOversampling.prepareBuffers(numInputSamples);
 
-    if (numUpsampledSamples == 0) {
-      for (auto i = 0; i < totalNumOutputChannels; ++i) {
-        buffer.clear(i, 0, numSamples);
-      }
-      return;
+  uint32_t const numUpsampledSamples =
+    signalOversampling.upSample(ioAudio, numInputSamples);
+
+  dryOversampling.upSample(dryBuffer.get(), numInputSamples);
+
+  if (numUpsampledSamples == 0) {
+    for (auto i = 0; i < totalNumOutputChannels; ++i) {
+      buffer.clear(i, 0, numSamples);
     }
+    return;
   }
 
-  auto& upsampledBuffer = oversampling.signal.getUpSampleOutputInterleaved();
+  auto& upsampledBuffer = signalOversampling.getUpSampleOutputInterleaved();
   auto& upsampledIo = upsampledBuffer.getBuffer2(0);
-  auto& upsampledDryBuffer = oversampling.dry.getUpSampleOutputInterleaved();
-
-  if (!isOversampling) {
-    upsampledBuffer.setNumSamples(numSamples);
-    upsampledBuffer.interleave(ioAudio, 2, numSamples);
-
-    upsampledDryBuffer.setNumSamples(numSamples);
-    upsampledDryBuffer.interleave(dryBuffer.get(), 2, numSamples);
-  }
 
   // waveshaping
 
   if (!isBypassing) {
-    splineDispatcher.processBlock(
-      *spline, upsampledIo, upsampledIo, numActiveKnots);
+    dsp->waveshape(upsampledIo, numActiveKnots);
   }
 
   // downsampling
 
-  if (isOversampling) {
-    oversampling.signal.downSample(upsampledBuffer, numSamples);
-    oversampling.dry.downSample(upsampledDryBuffer, numSamples);
-  }
+  signalOversampling.downSample(upsampledBuffer, numInputSamples);
+  dryOversampling.downSample(dryOversampling.getUpSampleOutputInterleaved(),
+                             numInputSamples);
 
   // dry-wet and output gain
 
-  auto& wetOutput = isOversampling
-                      ? oversampling.signal.getDownSampleOutputInterleaved()
-                      : upsampledBuffer;
-  auto& dryOutput = isOversampling
-                      ? oversampling.dry.getDownSampleOutputInterleaved()
-                      : upsampledDryBuffer;
+  auto& wetOutput = signalOversampling.getDownSampleOutputInterleaved();
+  auto& dryOutput = dryOversampling.getDownSampleOutputInterleaved();
 
   constexpr double vuMeterFrequency = 10.0;
 
