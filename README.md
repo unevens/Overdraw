@@ -8,35 +8,88 @@
 
 - The transfer functions are smoothly automatable splines.
 - Optional Mid/Side Stereo processing.
-- All parameters, and all splines, can have different values on the Left channel and on the Right channel - or on the Mid channel and on the Side channel, when in Mid/Side Stero Mode.
+- All parameters, and all splines, can have different values on the Left channel and on the Right channel - or on the Mid channel and on the Side channel, when in Mid/Side Stereo Mode.
 - Dry-Wet.
 - Up to 32x Oversampling with either Minimum Phase or Linear Phase Antialiasing.
 - VU meter showing the difference between the input level and the output level.
 - Customizable smoothing time, used to avoid zips when automating the knots of the splines, the wet amount, or the input and output gains.
 
-## Build
+## Download
 
-Clone with
+Pre-built binaries:
 
-`git clone --recursive https://github.com/unevens/Overdraw`
+- **macOS** (universal — Apple Silicon + Intel): see the [Releases](https://github.com/unevens/Overdraw/releases) page. Each macOS zip contains the AU + VST3 bundles, the `legal/` folder, and a `README.txt` with install instructions (including the `xattr -dr com.apple.quarantine` step needed for unsigned OSS plug-ins).
+- **Windows / Linux**: https://www.unevens.net/overdraw.html
 
-Overdraw uses the [JUCE](https://github.com/WeAreROLI/JUCE) cross-platform C++ framework.
+## Build from source
 
-You'll need [Projucer](https://shop.juce.com/get-juce) to open the file `Overdraw.jucer` and generate the platform specific builds.
+Clone recursively:
 
-## Supported platforms
+```
+git clone --recursive https://github.com/unevens/Overdraw
+```
 
-Overdraw is developed and tested on Windows and Ubuntu. It may also work on macOS, but I can neither confirm nor deny.
+Overdraw uses the [JUCE](https://github.com/juce-framework/JUCE) C++ framework, referenced as a sibling checkout at `../JUCE`. Clone JUCE 8 next to this repo before building.
 
-VST and VST3 binaries are available at https://www.unevens.net/overdraw.html.
+The authoritative build is CMake (`CMakeLists.txt` at the repo root). The old Projucer `.jucer` file has been removed — see git history if you need it.
+
+### macOS
+
+Apple's bundled Clang (Xcode 17, Command Line Tools 21) and any upstream Clang older than 22 hit a NEON-intrinsic codegen bug in `Source/OverdrawDsp.cpp`. The fix shipped in upstream LLVM 22, so build with **Homebrew Clang ≥ 22**:
+
+```
+brew install llvm
+
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
+  -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++
+
+cmake --build build -j8
+```
+
+`CMakeLists.txt` enforces this — configuring with Apple Clang or any clang older than 22 fails immediately with a message pointing at the right compiler. It also auto-derives `llvm-ar` / `llvm-ranlib` from the chosen compiler's toolchain dir.
+
+This produces Standalone, AU, and VST3 in `build/Overdraw_artefacts/Release/`. The plug-ins are also copied to your user plug-in folders for an immediate DAW reload:
+
+- `~/Library/Audio/Plug-Ins/Components/Overdraw 1.2.component`
+- `~/Library/Audio/Plug-Ins/VST3/Overdraw 1.2.vst3`
+
+#### Build options
+
+| Option | Default | Description |
+|---|---|---|
+| `INSTALL_TO_USER_PLUGINS` | `ON` | Copy AU/VST3 to `~/Library/Audio/Plug-Ins/*` after build. Disable with `-DINSTALL_TO_USER_PLUGINS=OFF` for CI/release builds. |
+| `UNIVERSAL` | `OFF` | Build a universal arm64 + x86_64 binary. Required for release distribution. |
+
+#### Release zips
+
+`cmake --build build --target package-zip` stages a folder ready to be zipped:
+
+```
+build/release-zip/Overdraw 1.2 (macOS)/
+├── Overdraw 1.2.component
+├── Overdraw 1.2.vst3
+├── legal/
+└── README.txt
+```
+
+Use `-DUNIVERSAL=ON -DINSTALL_TO_USER_PLUGINS=OFF` when configuring the release build dir so the bundles run on Intel as well as Apple Silicon and the build doesn't touch your live `~/Library/Audio/Plug-Ins`.
+
+### Windows / Linux
+
+The CMake build is cross-platform via JUCE's `juce_add_plugin`, but the Windows and Linux builds have not been regression-tested since the migration off Projucer. Adapt the `cmake` invocations above for your platform's compiler and report any breakage.
 
 ## Submodules, libraries, credits
 
-- The [oversimple](https://github.com/unevens/hiir) submodule is a wrapper around two resampling libraries:
-    - [HIIR](https://github.com/unevens/hiir) library by Laurent de Soras, *"a 2x Upsampler/Downsampler with two-path polyphase IIR anti-aliasing filtering"*.
-    - [r8brain-free-src](https://github.com/avaneev/r8brain-free-src), *"an high-quality pro audio sample rate converter / resampler C++ library"* by Aleksey Vaneev.
-- [audio-dsp](https://github.com/unevens/audio-dsp), my toolbox for audio dsp and SIMD instructions, which uses Agner Fog's [vectorclass](https://github.com/vectorclass/version2) and [Boost.Align](https://www.boost.org/doc/libs/1_71_0/doc/html/align.html).
+- [oversimple](https://github.com/unevens/oversimple) wraps two resampling libraries:
+    - [HIIR](http://ldesoras.free.fr/prod.html) by Laurent de Soras — a 2x Upsampler/Downsampler with two-path polyphase IIR anti-aliasing filtering.
+    - [r8brain-free-src](https://github.com/avaneev/r8brain-free-src) by Aleksey Vaneev — a high-quality pro audio sample rate converter / resampler C++ library.
+- [audio-dsp](https://github.com/unevens/audio-dsp), my toolbox for audio DSP and SIMD instructions, built on Agner Fog's [vectorclass](https://github.com/vectorclass/version2).
+- [juicy](https://github.com/unevens/juicy), my JUCE-side UI/glue components (spline editor, attached controls, oversampling attachments).
 
-Overdraw is released under the GNU GPLv3 license.
+## License
+
+Overdraw is released under the GNU GPLv3 license. Full license text and third-party notices are in the [legal/](legal/) folder.
 
 VST is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
