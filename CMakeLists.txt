@@ -134,7 +134,7 @@ endif()
 option(INSTALL_TO_USER_PLUGINS
     "After build, copy AU/VST3 to ~/Library/Audio/Plug-Ins/* (macOS)" ON)
 
-set(JUCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../JUCE" CACHE PATH "Path to JUCE")
+set(JUCE_DIR "${CMAKE_CURRENT_LIST_DIR}/JUCE" CACHE PATH "Path to JUCE")
 add_subdirectory(${JUCE_DIR} JUCE EXCLUDE_FROM_ALL)
 
 juce_add_plugin(Overdraw
