@@ -18,8 +18,8 @@ if(APPLE)
 endif()
 
 # macOS arm64 toolchain preflight — shared with Curvessor, lives in
-# unevens/iplug-helpers since the rationale is identical for both ports.
-include(${CMAKE_SOURCE_DIR}/../iplug-helpers/cmake/HomebrewClang22Preflight.cmake)
+# unevens/iplug-helpers (added as a submodule at ./iplug-helpers).
+include(${CMAKE_SOURCE_DIR}/iplug-helpers/cmake/HomebrewClang22Preflight.cmake)
 iplug_helpers_require_homebrew_clang_22("Overdraw" "Source/OverdrawDsp.cpp")
 
 # iPlug2 framework
