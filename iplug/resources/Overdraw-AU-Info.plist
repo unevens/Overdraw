@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AudioComponents</key>
+	<array>
+		<dict>
+			<key>description</key>
+			<string>Overdraw</string>
+			<key>factoryFunction</key>
+			<string>Overdraw_Factory</string>
+			<key>manufacturer</key>
+			<string>UnEv</string>
+			<key>name</key>
+			<string>unevens: Overdraw</string>
+			<key>sandboxSafe</key>
+			<true/>
+			<key>subtype</key>
+			<string>OvDr</string>
+			<key>type</key>
+			<string>aufx</string>
+			<key>version</key>
+			<integer>0</integer>
+		</dict>
+	</array>
+	<key>AudioUnit Version</key>
+	<string>0x00000100</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>Overdraw</string>
+	<key>CFBundleGetInfoString</key>
+	<string>Overdraw v0.1.0 Copyright Dario Mambro 2020-2026</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.unevens.audiounit.Overdraw</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Overdraw</string>
+	<key>CFBundlePackageType</key>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleSignature</key>
+	<string>OvDr</string>
+	<key>CFBundleVersion</key>
+	<string>0.1.0</string>
+	<key>CSResourcesFileMapped</key>
+	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.13.0</string>
+	<key>NSPrincipalClass</key>
+	<string>Overdraw_View</string>
+</dict>
+</plist>
