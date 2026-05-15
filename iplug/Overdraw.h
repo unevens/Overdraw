@@ -91,8 +91,8 @@ enum ECtrlTags
 {
   kCtrlTagTitle = 0,
   kCtrlTagVersionNumber,
-  kCtrlTagLevelMeter,
-  kCtrlTagGainMeter,
+  kCtrlTagInputMeter,
+  kCtrlTagOutputMeter,
   kCtrlTagSplineEditor,
 };
 
@@ -194,14 +194,22 @@ private:
 
 #if IPLUG_DSP || IPLUG_EDITOR
   // VU meter snapshots: written from the audio thread, read from the GUI timer.
-  std::array<std::atomic<float>, 2> mLevelVuMeterResults{};
-  std::array<std::atomic<float>, 2> mGainVuMeterResults{};
+  std::array<std::atomic<float>, 2> mInputVuMeterResults{};
+  std::array<std::atomic<float>, 2> mOutputVuMeterResults{};
 
   // Cross-thread queues for the IVMeterControl widgets. Carrying linear
   // amplitudes (not dB) — IVMeterControl::EResponse::Log calls AmpToDB
   // internally and maps the result to [0,1] for the bar fill.
-  ISender<2> mLevelMeterSender;
-  ISender<2> mGainMeterSender;
+  //
+  //   mInputLevelSender  — pre-input-gain dry RMS, drives both the
+  //                        "Input" meter widget AND the spline editor's
+  //                        "current input" dot (X coord on the curve).
+  //   mOutputLevelSender — post-output-gain wet RMS, drives the "Output"
+  //                        meter widget. Sampled in M/S domain when M/S
+  //                        is on, so the meter follows the channels the
+  //                        waveshaper actually operates on.
+  ISender<2> mInputLevelSender;
+  ISender<2> mOutputLevelSender;
 #endif
 
 public:
@@ -229,8 +237,11 @@ private:
   // toggle is on, kept in sync from OnIdle.
   iplug::igraphics::ITextControl* mRowLabelL = nullptr;
   iplug::igraphics::ITextControl* mRowLabelR = nullptr;
-  // Level + gain meter pointers — same M/S-aware label flip as the matrix
-  // row labels, applied via the meter's per-track SetTrackName.
-  iplug::igraphics::IVTrackControlBase* mLevelMeter = nullptr;
-  iplug::igraphics::IVTrackControlBase* mGainMeter  = nullptr;
+  // Meter pointers — same M/S-aware label flip as the matrix row labels,
+  // applied via the meter's per-track SetTrackName from OnIdle. Overdraw
+  // ships two meters (Input + Output, no GR) since the waveshaper output
+  // already implicitly shows attenuation as a level drop on the Output
+  // meter relative to the Input.
+  iplug::igraphics::IVTrackControlBase* mInputMeter  = nullptr;
+  iplug::igraphics::IVTrackControlBase* mOutputMeter = nullptr;
 };

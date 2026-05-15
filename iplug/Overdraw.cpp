@@ -276,12 +276,13 @@ Overdraw::Overdraw(const InstanceInfo& info)
   }
 
 #if IPLUG_DSP
-  // VU meter initial values. Level meter carries linear amplitude (the
-  // wet-path RMS); gain meter carries the wet-vs-dry dB delta.
-  mLevelVuMeterResults[0].store(0.f);
-  mLevelVuMeterResults[1].store(0.f);
-  mGainVuMeterResults[0].store(0.f);
-  mGainVuMeterResults[1].store(0.f);
+  // VU meter initial values. Both Input and Output carry linear
+  // amplitude (Input = pre-input-gain dry RMS, Output = post-output-gain
+  // wet RMS).
+  mInputVuMeterResults[0].store(0.f);
+  mInputVuMeterResults[1].store(0.f);
+  mOutputVuMeterResults[0].store(0.f);
+  mOutputVuMeterResults[1].store(0.f);
 #endif
 
   // Initialize the single preset so it survives PruneUninitializedPresets in
@@ -334,11 +335,13 @@ Overdraw::Overdraw(const InstanceInfo& info)
     // far right of that slice, NOT below it.
     const IRECT upperBand = bodyArea.GetFromTop(kSplineSize);
     const IRECT meterStrip = upperBand.GetFromRight(kMeterStripW);
-    // Gain on the left, Level on the right (Dario's preferred order).
-    const IRECT gainMeterRect  = meterStrip.GetFromLeft(kMeterStripW * 0.5f)
-                                            .GetPadded(-2, 0, -2, 0);
-    const IRECT levelMeterRect = meterStrip.GetFromRight(kMeterStripW * 0.5f)
-                                            .GetPadded(-2, 0, -2, 0);
+    // Two meters — Input (left) and Output (right) — in signal-chain
+    // order. No gain-reduction meter here: with a waveshaper, the gain
+    // change is implicit in the Output drop relative to the Input.
+    const IRECT inputMeterRect  = meterStrip.GetFromLeft(kMeterStripW * 0.5f)
+                                             .GetPadded(-2, 0, -2, 0);
+    const IRECT outputMeterRect = meterStrip.GetFromRight(kMeterStripW * 0.5f)
+                                             .GetPadded(-2, 0, -2, 0);
 
     // ---------- Side controls area ----------
     // To the right of the spline, within the spline's vertical range. Two
@@ -495,8 +498,8 @@ Overdraw::Overdraw(const InstanceInfo& info)
       pGraphics->GetControlWithTag(kCtrlTagTitle)->SetTargetAndDrawRECTs(titleBounds);
       pGraphics->GetControlWithTag(kCtrlTagVersionNumber)->SetTargetAndDrawRECTs(versionBounds);
       pGraphics->GetControlWithTag(kCtrlTagSplineEditor)->SetTargetAndDrawRECTs(splineEditorRect);
-      pGraphics->GetControlWithTag(kCtrlTagLevelMeter)->SetTargetAndDrawRECTs(levelMeterRect);
-      pGraphics->GetControlWithTag(kCtrlTagGainMeter)->SetTargetAndDrawRECTs(gainMeterRect);
+      pGraphics->GetControlWithTag(kCtrlTagInputMeter)->SetTargetAndDrawRECTs(inputMeterRect);
+      pGraphics->GetControlWithTag(kCtrlTagOutputMeter)->SetTargetAndDrawRECTs(outputMeterRect);
       if (mKnotPanelKnobX)          mKnotPanelKnobX         ->SetTargetAndDrawRECTs(skXDisc);
       if (mKnotPanelKnobY)          mKnotPanelKnobY         ->SetTargetAndDrawRECTs(skYDisc);
       if (mKnotPanelKnobTan)        mKnotPanelKnobTan       ->SetTargetAndDrawRECTs(skTanDisc);
@@ -713,32 +716,36 @@ Overdraw::Overdraw(const InstanceInfo& info)
       mRowLabelR = lblR;
     }
 
-    // Meters — vertical, on the right edge of the plug. Each meter is
-    // 2-track (L+R) drawn as two adjacent vertical bars. Gain meter uses
-    // SetBaseValue(0.5) so the fill grows up from the centre for boost and
-    // down from the centre for cut.
+    // Two meters — vertical, on the right edge of the plug: Input level
+    // (pre-input-gain dry RMS) on the left, Output level (post-output-
+    // gain wet RMS) on the right. The Input meter shares its data with
+    // the spline editor's "current input" dot via OnIdle's
+    // TransmitDataToControlsWithTags — it's the X-axis coordinate of
+    // where on the curve the signal currently sits. The Output meter is
+    // the one that visibly drops when the waveshaper attenuates a
+    // channel; both are sampled in the M/S domain when M/S is on (i.e.
+    // before MidSideToLeftRight) so their per-track labels flip to M/S
+    // in M/S mode.
     const IVStyle meterStyle = kOverdrawStyle.WithDrawFrame(false);
-    auto* levelMeter = static_cast<OverdrawMeterControl<2>*>(pGraphics->AttachControl(
-      new OverdrawMeterControl<2>(levelMeterRect, "Level", meterStyle,
+    auto* inputMeter = static_cast<OverdrawMeterControl<2>*>(pGraphics->AttachControl(
+      new OverdrawMeterControl<2>(inputMeterRect, "Input", meterStyle,
                                     EDirection::Vertical, {"L","R"}, 0,
                                     OverdrawMeterControl<2>::EResponse::Log,
                                     -60.f, 6.f),
-      kCtrlTagLevelMeter));
-    auto* gainMeter = static_cast<OverdrawMeterControl<2>*>(pGraphics->AttachControl(
-      new OverdrawMeterControl<2>(gainMeterRect, "Gain", meterStyle,
+      kCtrlTagInputMeter));
+    auto* outputMeter = static_cast<OverdrawMeterControl<2>*>(pGraphics->AttachControl(
+      new OverdrawMeterControl<2>(outputMeterRect, "Output", meterStyle,
                                     EDirection::Vertical, {"L","R"}, 0,
                                     OverdrawMeterControl<2>::EResponse::Log,
-                                    -36.f, 36.f,
-                                    {-24, -12, -6, 0, 6, 12, 24}),
-      kCtrlTagGainMeter));
-    gainMeter->SetBaseValue(0.5);
+                                    -60.f, 6.f),
+      kCtrlTagOutputMeter));
     // Cache the meters so OnIdle can flip their per-track labels between
-    // "L"/"R" and "M"/"S" when the Mid-Side toggle changes — the meter
-    // values are already in the M/S domain in that mode because the DSP
-    // signal chain processes in M/S before the LR-restore at the end of
+    // "L"/"R" and "M"/"S" when the Mid-Side toggle changes — meter values
+    // are already in the M/S domain in that mode because the DSP signal
+    // chain processes in M/S before the LR-restore at the end of
     // ProcessBlock.
-    mLevelMeter = levelMeter;
-    mGainMeter  = gainMeter;
+    mInputMeter  = inputMeter;
+    mOutputMeter = outputMeter;
   };
 #endif
 }
@@ -782,10 +789,10 @@ void Overdraw::OnReset()
 
   mVuMeterWet = Vec2d(0.0);
   mVuMeterDry = Vec2d(0.0);
-  mLevelVuMeterResults[0].store(0.f);
-  mLevelVuMeterResults[1].store(0.f);
-  mGainVuMeterResults[0].store(0.f);
-  mGainVuMeterResults[1].store(0.f);
+  mInputVuMeterResults[0].store(0.f);
+  mInputVuMeterResults[1].store(0.f);
+  mOutputVuMeterResults[0].store(0.f);
+  mOutputVuMeterResults[1].store(0.f);
 }
 
 // =============================================================================
@@ -1045,27 +1052,12 @@ void Overdraw::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
     }
   }
 
-  // Gain delta = wet_dB − (input * output)²_dB · dry_dB, computed per
-  // channel as a scalar (the audio path is already done — this runs once
-  // per block on Vec2d MS accumulators).
-  double gainMeter[2] = { 0.0, 0.0 };
   if (isBypassing) {
     dryOutput.deinterleave(ioAudio, 2, nFrames);
   } else {
     outputGain.store(mOutputGain);
     mVuMeterDry = vuMeterDry;
     mVuMeterWet = vuMeterWet;
-    constexpr double kTiny = std::numeric_limits<float>::min();
-    double wetSq[2], drySq[2];
-    vuMeterWet.store(wetSq);
-    vuMeterDry.store(drySq);
-    for (int c = 0; c < 2; ++c) {
-      const double offset = outputGainTarget[c] * inputGainTarget[c];
-      const double offsetSq = offset * offset;
-      gainMeter[c] = (10.0 / kLn10) *
-                     (std::log(wetSq[c] + kTiny)
-                      - std::log(offsetSq * drySq[c] + kTiny));
-    }
     wetOutput.deinterleave(ioAudio, 2, nFrames);
   }
 
@@ -1073,23 +1065,23 @@ void Overdraw::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
     MidSideToLeftRight(ioAudio, nFrames);
   }
 
-  // VU meter snapshot to GUI-readable atomics + queues.
-  ISenderData<2, float> levelData{kCtrlTagLevelMeter, 2, 0};
-  ISenderData<2, float> gainData{kCtrlTagGainMeter, 2, 0};
-  // Level meter shows the wet-path RMS as linear amplitude; the spline
-  // editor uses this too to plot the "current input" dot on the curve.
-  levelData.vals[0] = static_cast<float>(std::sqrt(vuMeterWet[0]));
-  levelData.vals[1] = static_cast<float>(std::sqrt(vuMeterWet[1]));
-  // Gain meter is the wet-vs-dry dB delta. IVMeterControl::EResponse::Log
-  // wants linear amplitude, so convert back from dB.
-  gainData.vals[0] = static_cast<float>(std::pow(10.0, gainMeter[0] / 20.0));
-  gainData.vals[1] = static_cast<float>(std::pow(10.0, gainMeter[1] / 20.0));
+  // VU meter snapshot to GUI-readable atomics + queues. The Input meter
+  // sees the pre-input-gain dry RMS (= the level the user is feeding the
+  // plug, in M/S domain when M/S is on); the Output meter sees the
+  // post-output-gain wet RMS (= the level leaving the plug). The dB
+  // delta between them visually shows the shaper's gain effect.
+  ISenderData<2, float> inputData {kCtrlTagInputMeter,  2, 0};
+  ISenderData<2, float> outputData{kCtrlTagOutputMeter, 2, 0};
+  inputData.vals[0]  = static_cast<float>(std::sqrt(vuMeterDry[0]));
+  inputData.vals[1]  = static_cast<float>(std::sqrt(vuMeterDry[1]));
+  outputData.vals[0] = static_cast<float>(std::sqrt(vuMeterWet[0]));
+  outputData.vals[1] = static_cast<float>(std::sqrt(vuMeterWet[1]));
   for (int c = 0; c < 2; ++c) {
-    mLevelVuMeterResults[c].store(levelData.vals[c]);
-    mGainVuMeterResults[c].store(static_cast<float>(gainMeter[c]));
+    mInputVuMeterResults[c].store(inputData.vals[c]);
+    mOutputVuMeterResults[c].store(outputData.vals[c]);
   }
-  mLevelMeterSender.PushData(levelData);
-  mGainMeterSender.PushData(gainData);
+  mInputLevelSender.PushData(inputData);
+  mOutputLevelSender.PushData(outputData);
 }
 
 #endif // IPLUG_DSP
@@ -1099,13 +1091,14 @@ void Overdraw::ProcessBlock(sample** inputs, sample** outputs, int nFrames)
 // (it just no-ops via SendControlMsgFromDelegate when there's no UI).
 void Overdraw::OnIdle()
 {
-  // Level meter packets go to both the meter widget and the spline editor —
-  // the editor uses them to plot a moving "current input" dot on the curve.
-  // TransmitDataToControlsWithTags overrides d.ctrlTag per recipient so the
-  // same queue payload reaches both controls.
-  mLevelMeterSender.TransmitDataToControlsWithTags(
-    *this, {kCtrlTagLevelMeter, kCtrlTagSplineEditor});
-  mGainMeterSender.TransmitData(*this);
+  // Input-level packets go to both the "Input" meter widget and the
+  // spline editor — the editor uses them to plot the moving "current
+  // input" dot at the X coordinate of where on the curve the signal
+  // currently sits. TransmitDataToControlsWithTags overrides d.ctrlTag
+  // per recipient so the same queue payload reaches both controls.
+  mInputLevelSender.TransmitDataToControlsWithTags(
+    *this, {kCtrlTagInputMeter, kCtrlTagSplineEditor});
+  mOutputLevelSender.TransmitData(*this);
 
 #if IPLUG_EDITOR
   // If the editor is closed, the cached side-panel knob / row-label
@@ -1149,14 +1142,13 @@ void Overdraw::OnIdle()
     mRowLabelL->SetStr(ms ? "Mid"  : "Left");
     mRowLabelR->SetStr(ms ? "Side" : "Right");
   }
-  if (mLevelMeter) {
-    mLevelMeter->SetTrackName(0, ms ? "M" : "L");
-    mLevelMeter->SetTrackName(1, ms ? "S" : "R");
-  }
-  if (mGainMeter) {
-    mGainMeter->SetTrackName(0, ms ? "M" : "L");
-    mGainMeter->SetTrackName(1, ms ? "S" : "R");
-  }
+  auto flipTrackLabels = [ms](iplug::igraphics::IVTrackControlBase* meter) {
+    if (!meter) return;
+    meter->SetTrackName(0, ms ? "M" : "L");
+    meter->SetTrackName(1, ms ? "S" : "R");
+  };
+  flipTrackLabels(mInputMeter);
+  flipTrackLabels(mOutputMeter);
 #endif
 }
 
@@ -1175,8 +1167,8 @@ void Overdraw::OnUIClose()
   mKnotPanelLink           = nullptr;
   mRowLabelL               = nullptr;
   mRowLabelR               = nullptr;
-  mLevelMeter              = nullptr;
-  mGainMeter               = nullptr;
+  mInputMeter              = nullptr;
+  mOutputMeter             = nullptr;
 #endif
 }
 
