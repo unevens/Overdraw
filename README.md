@@ -1,101 +1,143 @@
-# Overdraw
+# Overdraw — iPlug2 port
+
+> This is the `iplug2-port` branch. It hosts an in-progress port of
+> Overdraw onto the [iPlug2](https://github.com/iPlug2/iPlug2)
+> framework, with a modernized GUI (GPU-accelerated via NanoVG / Metal)
+> and CLAP support alongside AU + VST3.
+>
+> The shipping JUCE-based build lives on the `master` branch.
 
 ![Overdraw GUI](Images/screenshot.jpg?raw=true 'screenshot')
 
-[Overdraw](https://www.unevens.net/overdraw.html) is an audio plug-in that implements a waveshaper in which **the transfer function of each channel is an automatable spline**.
+[Overdraw](https://www.unevens.net/overdraw.html) is an audio plug-in
+that implements a waveshaper in which **the transfer function of
+each channel is an automatable spline**.
 
-## Features
+## What's in this branch
 
-- The transfer functions are smoothly automatable splines.
-- Optional Mid/Side Stereo processing.
-- All parameters, and all splines, can have different values on the Left channel and on the Right channel - or on the Mid channel and on the Side channel, when in Mid/Side Stereo Mode.
-- Dry-Wet.
-- Up to 32x Oversampling with either Minimum Phase or Linear Phase Antialiasing.
-- VU meter showing the difference between the input level and the output level.
-- Customizable smoothing time, used to avoid zips when automating the knots of the splines, the wet amount, or the input and output gains.
+This branch preserves the entire JUCE source tree (`Source/`,
+`juicy/`) and replaces the original JUCE-based `CMakeLists.txt` with
+an iPlug2-based one. The plug-in is rebuilt against iPlug2 in
+`iplug/Overdraw.{h,cpp}`, but the heavy DSP is shared verbatim with
+the JUCE side via `Source/OverdrawDsp.{h,cpp}` — there is exactly
+one copy of the spline / waveshaper code.
 
-## Download
+Functional parity with the JUCE side: full DSP signal chain, all
+params with their original names preserved, oversampling (linear
+phase + minimum phase), 15-knot spline editor with the
+positive+negative-quadrant transfer curves, per-channel symmetry
+(folds the input via `abs()` and `sign_combine()` so negative-X
+knots have no effect on a symmetric channel), the fixed origin
+anchor (the curve always passes through (0, 0) so a zero input
+produces a zero output — no DC offset), ShapeSymmetricSkew for
+shaped knobs, ISender-driven VU meters, draggable knots,
+in-editor tangent handles, double-click toggles (enabled / linked),
+ghost-rendered disabled knots, live level dot per channel, side
+panel that rebinds on knot selection, periodic redraw via `OnIdle`.
 
-Pre-built binaries:
+Two meters across the right edge — Input level and Output level —
+both in M/S domain when M/S mode is on. There is no gain-reduction
+meter on the Overdraw port: with a waveshaper the gain change is
+implicit in the Output drop relative to the Input.
 
-- **macOS** (universal — Apple Silicon + Intel): see the [Releases](https://github.com/unevens/Overdraw/releases) page. Each macOS zip contains the AU + VST3 bundles, the `legal/` folder, and a `README.txt` with install instructions (including the `xattr -dr com.apple.quarantine` step needed for unsigned OSS plug-ins).
-- **Windows / Linux**: https://www.unevens.net/overdraw.html
+Shared UI plumbing for the two iPlug2-ported plug-ins
+(Curvessor + Overdraw) lives in
+[unevens/iplug-helpers](https://github.com/unevens/iplug-helpers),
+included here as a submodule: the visual palette, the LCD-style
+meter control with always-visible track-name labels, the templated
+spline-editor control, the knob+label+caption cell layout helper,
+the linkable-pair propagation logic, and the M/S-aware row-label
+flipper.
 
 ## Build from source
 
-Clone recursively:
+Clone recursively (this branch pulls in iPlug2 + iplug-helpers in
+addition to the JUCE-side submodules):
 
 ```
-git clone --recursive https://github.com/unevens/Overdraw
+git clone --recursive --branch iplug2-port https://github.com/unevens/Overdraw
 ```
 
-Overdraw uses the [JUCE](https://github.com/juce-framework/JUCE) C++ framework, referenced as a sibling checkout at `../JUCE`. Clone JUCE 8 next to this repo before building.
-
-The authoritative build is CMake (`CMakeLists.txt` at the repo root). The old Projucer `.jucer` file has been removed — see git history if you need it.
+The build is driven by CMake (`CMakeLists.txt` at the repo root)
+with presets in `CMakePresets.json`. The root CMake pulls iPlug2 in
+from `./iPlug2`, runs the Homebrew-Clang-22 preflight from
+`iplug-helpers/cmake/`, and then adds `iplug/` as the plug-in
+subdirectory.
 
 ### macOS
 
-Apple's bundled Clang (Xcode 17, Command Line Tools 21) and any upstream Clang older than 22 hit a NEON-intrinsic codegen bug in `Source/OverdrawDsp.cpp`. The fix shipped in upstream LLVM 22, so build with **Homebrew Clang ≥ 22**:
+Apple's bundled Clang (Xcode 17, Command Line Tools 21) and any
+upstream Clang older than 22 hit a NEON-intrinsic codegen bug in
+`Source/OverdrawDsp.cpp`. The fix shipped in upstream LLVM 22, so
+build with **Homebrew Clang ≥ 22**:
 
 ```
 brew install llvm
 
-cmake -S . -B build \
-  -DCMAKE_BUILD_TYPE=Release \
+cmake --preset macos-ninja \
   -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang \
   -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++
 
-cmake --build build -j8
+cmake --build --preset macos-ninja
 ```
 
-`CMakeLists.txt` enforces this — configuring with Apple Clang or any clang older than 22 fails immediately with a message pointing at the right compiler. It also auto-derives `llvm-ar` / `llvm-ranlib` from the chosen compiler's toolchain dir.
+The top-level `CMakeLists.txt` enforces this — configuring with
+Apple Clang or any clang older than 22 fails immediately with a
+message pointing at the right compiler. The preflight ships in
+`iplug-helpers/cmake/HomebrewClang22Preflight.cmake` so the JUCE
+build and the iPlug2 build use the same enforcement logic.
 
-This produces Standalone, AU, and VST3 in `build/Overdraw_artefacts/Release/`. The plug-ins are also copied to your user plug-in folders for an immediate DAW reload:
+This produces AU + VST3 + CLAP bundles in
+`build/macos-ninja/iplug/out/`. The plug-ins are deployed
+automatically to your user plug-in folders on a successful link:
 
-- `~/Library/Audio/Plug-Ins/Components/Overdraw 1.2.component`
-- `~/Library/Audio/Plug-Ins/VST3/Overdraw 1.2.vst3`
+- `~/Library/Audio/Plug-Ins/Components/Overdraw.component`
+- `~/Library/Audio/Plug-Ins/VST3/Overdraw.vst3`
+- `~/Library/Audio/Plug-Ins/CLAP/Overdraw.clap`
 
-#### Build options
-
-| Option | Default | Description |
-|---|---|---|
-| `UNIVERSAL` | `ON` | Build a universal arm64+x86_64 binary so a single zip serves both Apple Silicon and Intel users. Disable with `-DUNIVERSAL=OFF` for ~2x faster single-arch dev iteration. |
-| `INSTALL_TO_USER_PLUGINS` | `ON` | Copy AU/VST3 to `~/Library/Audio/Plug-Ins/*` after build. Disable with `-DINSTALL_TO_USER_PLUGINS=OFF` for CI builds or when you don't want the build to touch your live plug-in folder. |
-
-#### Release zips
-
-`cmake --build build --target package-zip` produces both a staging folder and a ready-to-upload zip:
-
-```
-build/release-zip/
-├── Overdraw1.2_mac/
-│   ├── Overdraw 1.2.component
-│   ├── Overdraw 1.2.vst3
-│   ├── legal/
-│   └── README.txt
-└── Overdraw1.2_mac.zip
-```
-
-The platform suffix becomes `_win` / `_linux` when built on those hosts.
+Universal arm64+x86_64 is on by default (see `UNIVERSAL` in
+`CMakeLists.txt`); turn it off for fast single-arch dev iteration.
 
 ### Windows
 
-The CMake build is cross-platform via JUCE's `juce_add_plugin`. Windows is the next platform to be re-validated since the migration off Projucer. Adapt the `cmake` invocations above for MSVC, build, and please report any breakage.
+The CMake presets include `windows-vs2022` and
+`windows-vs2022-arm64ec`. Untested at this stage — the next milestone
+after macOS polish is a Reaper smoke-test on Windows 11.
 
 ### Linux
 
-The Linux build worked under the old Projucer setup but is not actively tested right now. The CMake setup should be cross-platform via `juce_add_plugin`, but expect to fix things if you build there. PRs welcome.
+Untested. Should work via iPlug2's cross-platform support; PRs
+welcome.
 
 ## Submodules, libraries, credits
 
-- [oversimple](https://github.com/unevens/oversimple) wraps two resampling libraries:
-    - [HIIR](http://ldesoras.free.fr/prod.html) by Laurent de Soras — a 2x Upsampler/Downsampler with two-path polyphase IIR anti-aliasing filtering.
-    - [r8brain-free-src](https://github.com/avaneev/r8brain-free-src) by Aleksey Vaneev — a high-quality pro audio sample rate converter / resampler C++ library.
-- [audio-dsp](https://github.com/unevens/audio-dsp), my toolbox for audio DSP and SIMD instructions, built on Agner Fog's [vectorclass](https://github.com/vectorclass/version2).
-- [juicy](https://github.com/unevens/juicy), my JUCE-side UI/glue components (spline editor, attached controls, oversampling attachments).
+- [iPlug2](https://github.com/iPlug2/iPlug2) — the cross-platform
+  audio plug-in framework. Pulled in at `./iPlug2`.
+- [unevens/iplug-helpers](https://github.com/unevens/iplug-helpers)
+  — shared UI plumbing for Curvessor + Overdraw iPlug2 ports. Pulled
+  in at `./iplug-helpers`.
+- [oversimple](https://github.com/unevens/oversimple) wraps two
+  resampling libraries:
+    - [HIIR](http://ldesoras.free.fr/prod.html) by Laurent de Soras
+      — a 2× Upsampler/Downsampler with two-path polyphase IIR
+      anti-aliasing filtering.
+    - [r8brain-free-src](https://github.com/avaneev/r8brain-free-src)
+      by Aleksey Vaneev — a high-quality pro audio sample rate
+      converter / resampler C++ library.
+- [audio-dsp](https://github.com/unevens/audio-dsp), my toolbox for
+  audio DSP and SIMD instructions, built on Agner Fog's
+  [vectorclass](https://github.com/vectorclass/version2).
+- The JUCE-side editor (`Source/PluginProcessor.{h,cpp}`,
+  `Source/PluginEditor.{h,cpp}`, the whole `juicy/` tree) is
+  preserved on this branch so the shared DSP TU stays buildable
+  alongside the JUCE master branch, but only the JUCE-free pieces
+  (`Source/OverdrawDsp.{h,cpp}` and `juicy/SplineEditorDsp.hpp`) are
+  compiled into the iPlug2 build.
 
 ## License
 
-Overdraw is released under the GNU GPLv3 license. Full license text and third-party notices are in the [legal/](legal/) folder.
+Overdraw is released under the GNU GPLv3 license. Full license text
+and third-party notices are in the [legal/](legal/) folder.
 
-VST is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
+VST is a trademark of Steinberg Media Technologies GmbH, registered
+in Europe and other countries.
